@@ -1,4 +1,5 @@
-## Keywords
+## Special Identifiers
+### Keywords
 integer
 boolean
 if
@@ -8,42 +9,24 @@ not
 and
 or
 function
-
-### Regular expression
-(integer|if|boolean|then|else|not|and|or|function)
-
-## Boolean Literal and Primitive Identifier
-- Do we treat these seperately from keywords? The example under section 3
-- of the homework seems to imply we do, they have print as an "identifier"
-- I created a
-
-true  \ boolean literals
-false / 
-print | primitive identifier
-
-## Boolean Literal
+### Primitive Identifier
+print
+### Boolean Literal
 true false
 
-### Regular expression
-(true|false)
+Potentially best to have these in a dictionary and lookup afterwards
 
 ## Punctuation
 ( ) , : punctuation
 
 ### Regular expression
-(\(|\)|,|:0
+(\(|\)|,|:)
 
 ## Operators
 + - / < = operators
 
 ### Regular expression
 (+|-|/|<|=)
-
-## Comments
-(* *) special characters
-
-### Regular expression
-(_|\(*|*\))
 
 ## Identifiers
 [a-zA-Z][a-zA-Z0-9_]*
@@ -69,5 +52,3 @@ Comment is anything between (* and *)
 
 ### Regular expression
 (\t|\n|\r|\(*.**\))
-
-
