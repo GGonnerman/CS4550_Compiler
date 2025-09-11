@@ -47,7 +47,7 @@ Potentially best to have these in a dictionary and lookup afterwards
 
 ## Skippable Characters
 space, tab "\t", end-line "\n" or "\r"
-May not apprea inside literal, identifier, keyword, or operator
+May not appear inside literal, identifier, keyword, or operator
 Comment is anything between (* and *)
 
 ### Regular expression
