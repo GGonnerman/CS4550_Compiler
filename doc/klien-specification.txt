@@ -1,0 +1,73 @@
+## Keywords
+integer
+boolean
+if
+then
+else
+not
+and
+or
+function
+
+### Regular expression
+(integer|if|boolean|then|else|not|and|or|function)
+
+## Boolean Literal and Primitive Identifier
+- Do we treat these seperately from keywords? The example under section 3
+- of the homework seems to imply we do, they have print as an "identifier"
+- I created a
+
+true  \ boolean literals
+false / 
+print | primitive identifier
+
+## Boolean Literal
+true false
+
+### Regular expression
+(true|false)
+
+## Punctuation
+( ) , : punctuation
+
+### Regular expression
+(\(|\)|,|:0
+
+## Operators
++ - / < = operators
+
+### Regular expression
+(+|-|/|<|=)
+
+## Comments
+(* *) special characters
+
+### Regular expression
+(_|\(*|*\))
+
+## Identifiers
+[a-zA-Z][a-zA-Z0-9_]*
+- Starts with a letter than any number of letters/digits/underscore
+- Must be no longer than 256; I don't recall how we were to enforce this
+- Case sensitive
+
+### Reguar expression
+[a-zA-Z][a-zA-Z0-9_]*
+
+## Integer Literal
+- Must be 0 - 2^{31}-1
+- Leading 0s not allowed
+- Always positive (no leading + or -)
+
+### Regular expression
+0 | [1-9][0-9]*
+
+## Skippable Characters
+space, tab "\t", end-line "\n" or "\r"
+May not apprea inside literal, identifier, keyword, or operator
+Comment is anything between (* and *)
+
+### Regular expression
+(\t|\n|\r|\(*.**\))
+
+
