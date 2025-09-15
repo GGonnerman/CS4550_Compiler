@@ -9,7 +9,7 @@ class TokenType(Enum):
     primitive_identifier = 5
     punctuation = 6
     operator = 7
-    eof = 8  
+    eof = 8
 
 
 class Token:
