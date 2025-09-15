@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"[python]": {
+			"editor.formatOnSave": true,
+			"editor.codeActionsOnSave": {
+				"source.organizeImports.ruff": "always",
+				"source.fixAll.ruff": "always"
+			}
+		},
+		"python.terminal.executeInFileDir": true,
+		"python.testing.cwd": "",
+		"debugpy.showPythonInlineValues": true,
+	}
+}
