@@ -15,9 +15,9 @@ class TokenType(IntEnum):
 
 
 class Token:
-    def __init__(self, token_type: TokenType, token_value: int | None = None):
+    def __init__(self, token_type: TokenType, token_value: str | None = None):
         self.token_type: TokenType = token_type
-        self.token_value: int | None = token_value
+        self.token_value: str | None = token_value
 
     def is_integer(self):
         return self.token_type == TokenType.int_token
