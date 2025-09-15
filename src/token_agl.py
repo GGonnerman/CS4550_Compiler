@@ -1,15 +1,15 @@
 from enum import IntEnum, auto
 
-
-class TokenType(IntEnum):
-    TERMINATOR = auto()
-    PUNCTUATION = auto()
-    OPERATOR = auto()
-    IDENTIFIER = auto()
-    INTEGER = auto()
-    KEYWORD = auto()
-    BOOLEAN = auto()
-    PRIMITIVE_IDENTIFIER = auto()
+class TokenType(Enum):
+    terminator = 0
+    int_token = 1
+    identifier = 2
+    keyword = 3
+    boolean = 4
+    primitive_identifier = 5
+    punctuation = 6
+    operator = 7
+    eof = 8  
 
 
 class Token:
