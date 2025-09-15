@@ -1,15 +1,17 @@
-from enum import IntEnum, auto
+from enum import IntEnum
 
-class TokenType(Enum):
-    terminator = 0
-    int_token = 1
-    identifier = 2
-    keyword = 3
-    boolean = 4
-    primitive_identifier = 5
-    punctuation = 6
-    operator = 7
-    eof = 8  
+from typing_extensions import override
+
+
+class TokenType(IntEnum):
+    int_token = 0
+    identifier = 1
+    keyword = 2
+    boolean = 3
+    primitive_identifier = 4
+    punctuation = 5
+    operator = 6
+    eof = 7
 
 
 class Token:
@@ -17,53 +19,51 @@ class Token:
         self.token_type: TokenType = token_type
         self.token_value: int | None = token_value
 
-    def isTerminator(self):
-        return self.token_type == TokenType.terminator
-
-    def isInteger(self):
+    def is_integer(self):
         return self.token_type == TokenType.int_token
 
-    def isIdentifier(self):
+    def is_identifier(self):
         return self.token_type == TokenType.identifier
 
-    def isKeyword(self):
+    def is_keyword(self):
         return self.token_type == TokenType.keyword
 
-    def isBoolean(self):
+    def is_boolean(self):
         return self.token_type == TokenType.boolean
 
-    def isPrimitiveIdentifier(self):
+    def is_primitive_identifier(self):
         return self.token_type == TokenType.primitive_identifier
 
-    def isPunctuation(self):
+    def is_punctuation(self):
         return self.token_type == TokenType.punctuation
 
-    def isOperator(self):
+    def is_operator(self):
         return self.token_type == TokenType.operator
 
-    def isEOF(self):
+    def is_eof(self):
         return self.token_type == TokenType.eof
 
     def value(self):
         return self.token_value
 
+    @override
     def __repr__(self):
-        if self.isTerminator():
-            return 'terminator'
-        elif self.isInteger():
-            return f'integer = {self.token_value}'
-        elif self.isIdentifier():
-            return f'identifier = {self.token_value}'
-        elif self.isKeyword():
-            return f'keyword = {self.token_value}'
-        elif self.isBoolean():
-            return f'boolean = {self.token_value}'
-        elif self.isPrimitiveIdentifier():
-            return f'primitive = {self.token_value}'
-        elif self.isPunctuation():
-            return f'punctuation = {self.token_value}'
-        elif self.isOperator():
-            return f'operator = {self.token_value}'
-        else:  
-            return 'EOF'
-
+        if self.is_integer():
+            return f"integer = {self.token_value}"
+        if self.is_identifier():
+            return f"identifier = {self.token_value}"
+        if self.is_keyword():
+            return f"keyword = {self.token_value}"
+        if self.is_boolean():
+            return f"boolean = {self.token_value}"
+        if self.is_primitive_identifier():
+            return f"primitive = {self.token_value}"
+        if self.is_punctuation():
+            return f"punctuation = {self.token_value}"
+        if self.is_operator():
+            return f"operator = {self.token_value}"
+        if self.is_eof():
+            return "eof"
+        raise ValueError(
+            f"Unknown token type {self.token_type} with value {self.token_value}",
+        )
