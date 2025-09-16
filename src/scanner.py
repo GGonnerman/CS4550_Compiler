@@ -90,7 +90,7 @@ class Scanner:
             return self._stage10()
         raise Exception(f'Unknown char: "{char}"')
 
-    def _categorize_identifier(self, identifier) -> Token:
+    def _categorize_identifier(self, identifier: str) -> Token:
         if identifier in BOOLEAN_LITERALS:
             return Token(TokenType.boolean, self.accum)
         if identifier in PRIMATIVE_IDENTIFIERS:
