@@ -58,13 +58,8 @@
 		<!--The list of transitions.-->
 		<transition>
 			<from>0</from>
-			<to>4</to>
-			<read>* - / &lt; =</read>
-		</transition>
-		<transition>
-			<from>0</from>
-			<to>5</to>
-			<read>(</read>
+			<to>6</to>
+			<read>\t \r "  "</read>
 		</transition>
 		<transition>
 			<from>3</from>
@@ -72,14 +67,19 @@
 			<read>[0-9]</read>
 		</transition>
 		<transition>
-			<from>0</from>
-			<to>3</to>
-			<read>[1-9]</read>
+			<from>7</from>
+			<to>8</to>
+			<read>*</read>
 		</transition>
 		<transition>
 			<from>8</from>
-			<to>9</to>
-			<read>)</read>
+			<to>7</to>
+			<read>^)</read>
+		</transition>
+		<transition>
+			<from>0</from>
+			<to>3</to>
+			<read>[1-9]</read>
 		</transition>
 		<transition>
 			<from>7</from>
@@ -88,18 +88,28 @@
 		</transition>
 		<transition>
 			<from>8</from>
-			<to>7</to>
-			<read>^)</read>
+			<to>9</to>
+			<read>)</read>
 		</transition>
 		<transition>
-			<from>7</from>
-			<to>8</to>
-			<read>*</read>
+			<from>0</from>
+			<to>4</to>
+			<read>+ - * / &lt; =</read>
 		</transition>
 		<transition>
 			<from>0</from>
 			<to>10</to>
 			<read>) , .</read>
+		</transition>
+		<transition>
+			<from>0</from>
+			<to>1</to>
+			<read>[a-zA-Z]</read>
+		</transition>
+		<transition>
+			<from>0</from>
+			<to>2</to>
+			<read>0</read>
 		</transition>
 		<transition>
 			<from>1</from>
@@ -113,18 +123,8 @@
 		</transition>
 		<transition>
 			<from>0</from>
-			<to>1</to>
-			<read>[a-zA-Z]</read>
-		</transition>
-		<transition>
-			<from>0</from>
-			<to>6</to>
-			<read>\t \r "  "</read>
-		</transition>
-		<transition>
-			<from>0</from>
-			<to>2</to>
-			<read>0</read>
+			<to>5</to>
+			<read>(</read>
 		</transition>
 	</automaton>
 </structure>
