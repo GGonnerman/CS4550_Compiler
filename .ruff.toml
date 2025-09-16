@@ -41,7 +41,7 @@ target-version = "py311"
 # McCabe complexity (`C901`) by default.
 # select = ["E4", "E7", "E9", "F"]
 select = ["ALL"]
-ignore = ["D", "ANN204", "ANN201", "EXE002", "T201", "TRY003", "EM102", "PLR0911"]
+ignore = ["D", "ANN204", "ANN201", "ANN202", "EXE002", "T201", "TRY003", "EM102", "PLR0911"]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
