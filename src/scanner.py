@@ -32,6 +32,10 @@ class Scanner:
         self.working_position: int = 0
         self.accum: str = ""
 
+    def __iter__(self):
+        while self.has_next():
+            yield self.next()
+
     def next(self):
         return self._next(update_position=True)
 
