@@ -94,6 +94,9 @@ class Scanner:
         raise Exception(f'Unknown char: "{char}"')
 
     def _categorize_identifier(self, identifier: str) -> Token:
+        max_identifier_length = 256
+        if len(identifier) > max_identifier_length:
+            raise Exception("Identifiers cannot be longer than 256 characters")
         if identifier in BOOLEAN_LITERALS:
             return Token(TokenType.BOOLEAN, self.accum)
         if identifier in PRIMATIVE_IDENTIFIERS:
