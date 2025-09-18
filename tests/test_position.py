@@ -1,6 +1,6 @@
 import pytest
 
-from compiler.scanner import Position
+from compiler.position import Position
 
 
 @pytest.fixture
