@@ -174,16 +174,21 @@ class Scanner:
         return self._categorize_punctuation(self.accum)
 
     def _stage6(self) -> Token | None:
-        if self.working_position >= len(self.program):
-            raise LexicalError("All comments must be terminated before program ends")
-        char = self.program[self.working_position]
-        self.accum += char
-        self.working_position += 1
-        if char == "\n":
-            self.working_position.add_newline()
-        if char in "*":
-            return self._stage7()
-        return self._stage6()
+        # Inside of a comment block, in order to avoid crazy recursion depth, we
+        # walk through the entire block in one function to avoid crazy recursion depth
+        while True:
+            if self.working_position >= len(self.program):
+                raise LexicalError(
+                    "All comments must be terminated before program ends",
+                )
+
+            char = self.program[self.working_position]
+            self.accum += char
+            self.working_position += 1
+            if char == "\n":
+                self.working_position.add_newline()
+            if char in "*":
+                return self._stage7()
 
     def _stage7(self) -> Token | None:
         if self.working_position >= len(self.program):
