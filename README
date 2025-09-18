@@ -1,5 +1,11 @@
 Compile Squad
+Jett Nehls
 
+Scanner: Scans through the program and seperates each character of string of characters into tokens
+position: returns pointer position 
+token_agl: returns a token type for current position
+token_lister: prints the token and its type in a easily readable format
+Klein_errors: prints an output error message for klein
 
 Known Bugs:
 If you do an identifier or # over 1000 characters it will crash
