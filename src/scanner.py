@@ -1,3 +1,4 @@
+from klein_errors import LexicalError
 from token_agl import Token, TokenType
 
 ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -52,7 +53,7 @@ class Scanner:
 
         if update_position:
             self.position = self.working_position
-            self.has_terminated = token.is_a(TokenType.EOF)
+            self.has_terminated = token.is_a(TokenType.END_OF_FILE)
         else:
             self.working_position = self.position
 
@@ -60,7 +61,7 @@ class Scanner:
 
     def _stage0(self):
         if self.working_position >= len(self.program):
-            return Token(TokenType.EOF)
+            return Token(TokenType.END_OF_FILE)
         self.accum = ""
         char = self.program[self.working_position]
         if char in ALPHABET:
@@ -91,12 +92,12 @@ class Scanner:
             self.accum += char
             self.working_position += 1
             return self._stage10()
-        raise Exception(f'Unknown char: "{char}"')
+        raise LexicalError(f'Unknown character "{char}" when looking for next token.')
 
     def _categorize_identifier(self, identifier: str) -> Token:
         max_identifier_length = 256
         if len(identifier) > max_identifier_length:
-            raise Exception("Identifiers cannot be longer than 256 characters")
+            raise LexicalError("Identifiers cannot be longer than 256 characters")
         if identifier in BOOLEAN_LITERALS:
             return Token(TokenType.BOOLEAN, self.accum)
         if identifier in PRIMATIVE_IDENTIFIERS:
@@ -115,7 +116,10 @@ class Scanner:
             return self._stage1()
         if char in DELIMITERS:
             return self._categorize_identifier(self.accum)
-        raise Exception(f"Invalid char in identifier '{char}'")
+        raise LexicalError(
+            self.working_position,
+            f'Invalid character "{char}" in identifier. Only alphanumeric characters and underscores allowed.',
+        )
 
     def _stage2(self) -> Token:
         if self.working_position >= len(self.program):
@@ -124,8 +128,8 @@ class Scanner:
         if char in DELIMITERS:
             return Token(TokenType.INTEGER, self.accum)
         if char in INTEGERS:
-            raise Exception("Integer cannot start with leading 0")
-        raise Exception("Invalid char in integer")
+            raise LexicalError("Integer cannot start with leading 0")
+        raise LexicalError("Invalid char in integer")
 
     def _stage3(self) -> Token:
         if self.working_position >= len(self.program):
@@ -137,7 +141,7 @@ class Scanner:
             return self._stage3()
         if char in DELIMITERS:
             return Token(TokenType.INTEGER, self.accum)
-        raise Exception("Invalid char in integer")
+        raise LexicalError("Invalid char in integer")
 
     def _categorize_opterator(self, operator: str):
         if operator == "+":
@@ -152,7 +156,7 @@ class Scanner:
             return Token(TokenType.LESS_THAN)
         if operator == "=":
             return Token(TokenType.EQUAL)
-        raise Exception(f"Unable to categorize identifier: '{operator}'")
+        raise LexicalError(f"Unable to categorize identifier: '{operator}'")
 
     def _stage4(self) -> Token:
         return self._categorize_opterator(self.accum)
@@ -169,7 +173,7 @@ class Scanner:
 
     def _stage6(self) -> Token | None:
         if self.working_position >= len(self.program):
-            raise Exception("All comments must be terminated before program ends")
+            raise LexicalError("All comments must be terminated before program ends")
         char = self.program[self.working_position]
         self.accum += char
         self.working_position += 1
@@ -179,7 +183,7 @@ class Scanner:
 
     def _stage7(self) -> Token | None:
         if self.working_position >= len(self.program):
-            raise Exception("All comments must be terminated before program ends")
+            raise LexicalError("All comments must be terminated before program ends")
         char = self.program[self.working_position]
         self.accum += char
         self.working_position += 1
@@ -205,7 +209,7 @@ class Scanner:
             return Token(TokenType.COMMA)
         if punctuation == ":":
             return Token(TokenType.COLON)
-        raise Exception(f"Unable to categorize identifier: '{punctuation}")
+        raise LexicalError(f"Unable to categorize identifier: '{punctuation}")
 
     def _stage10(self) -> Token:
         return self._categorize_punctuation(self.accum)

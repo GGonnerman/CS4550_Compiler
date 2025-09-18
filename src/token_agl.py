@@ -19,7 +19,7 @@ class TokenType(IntEnum):
     DIVIDE = auto()
     LESS_THAN = auto()
     EQUAL = auto()
-    EOF = auto()
+    END_OF_FILE = auto()
 
 
 class Token:
@@ -29,6 +29,13 @@ class Token:
 
     def is_a(self, token_type: TokenType) -> bool:
         return self.token_type == token_type
+
+    def is_keyword(self):
+        return self.token_type in [
+            TokenType.KEYWORD,
+            TokenType.BOOLEAN,
+            TokenType.PRIMITIVE_IDENTIFIER,
+        ]
 
     def is_punctuation(self):
         return self.token_type in [
@@ -56,6 +63,6 @@ class Token:
         display = self.token_type.name.lower()
         if self.token_value is not None:
             # Just makes sure the tabs all line up nicely
-            display += " " * (10 - len(display))
+            display += " " * (20 - len(display))
             display += f"\t{self.value()}"
         return display
