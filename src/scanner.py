@@ -1,4 +1,6 @@
-from klein_errors import LexicalError
+from typing_extensions import SupportsIndex, override
+
+from klein_errors import KleinError, LexicalError
 from token_agl import Token, TokenType
 
 ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -28,8 +30,8 @@ class Scanner:
     def __init__(self, program: str):
         self.program: str = program
         self.has_terminated: bool = False
-        self.position: int = 0
-        self.working_position: int = 0
+        self.position: Position = Position()
+        self.working_position: Position = Position()
         self.accum: str = ""
 
     def __iter__(self):
@@ -44,18 +46,18 @@ class Scanner:
 
     def _next(self, *, update_position: bool = True):
         if self.has_terminated:
-            raise Exception("Cannot get more tokens after scanner has terminated")
+            raise KleinError("Cannot call next on terminated scanner")
 
         token: Token | None = None
         while token is None:
-            self.position = self.working_position
+            self.position.load(self.working_position)
             token = self._stage0()
 
         if update_position:
-            self.position = self.working_position
+            self.position.load(self.working_position)
             self.has_terminated = token.is_a(TokenType.END_OF_FILE)
         else:
-            self.working_position = self.position
+            self.working_position.load(self.position)
 
         return token
 
@@ -177,6 +179,8 @@ class Scanner:
         char = self.program[self.working_position]
         self.accum += char
         self.working_position += 1
+        if char == "\n":
+            self.working_position.add_newline()
         if char in "*":
             return self._stage7()
         return self._stage6()
@@ -187,6 +191,8 @@ class Scanner:
         char = self.program[self.working_position]
         self.accum += char
         self.working_position += 1
+        if char == "\n":
+            self.working_position.add_newline()
         if char in ")":
             return self._stage8()
         return self._stage6()
@@ -195,7 +201,8 @@ class Scanner:
         return
 
     def _stage9(self) -> None:
-        return
+        if self.accum == "\n":
+            self.working_position.add_newline()
         # Don't return anything; this is whitespace which is ignored
         # In theory could return token with type whitespace, but I don't
         # think whitespace is supposed to be a token.
@@ -216,3 +223,55 @@ class Scanner:
 
     def has_next(self) -> bool:
         return not self.has_terminated
+
+
+class Position(SupportsIndex):
+    def __init__(
+        self,
+        line_number: int = 0,
+        position: int = 0,  # Should line number be 0 or 1 indexed?
+        absolute_position: int = 0,
+    ):
+        self._line_number: int = line_number
+        self._position: int = position
+        self._absolute_position: int = absolute_position
+
+    def load(self, position: "Position"):
+        self._line_number = position.get_line_number()
+        self._position = position.get_position()
+        self._absolute_position = position.get_absolute_position()
+
+    def __iadd__(self, other: object):
+        if not isinstance(other, int):
+            raise TypeError("Cannot add non-integer to position")
+        self._absolute_position += other
+        self._position += other
+        return self
+
+    @override
+    def __index__(self) -> int:
+        return self._absolute_position
+
+    @override
+    def __eq__(self, other: object):
+        return self._absolute_position == other
+
+    def __ge__(self, other: int):
+        return self._absolute_position >= other
+
+    def add_newline(self):
+        self._position = 0
+        self._line_number += 1
+
+    def get_line_number(self):
+        return self._line_number
+
+    def get_position(self):
+        return self._position
+
+    def get_absolute_position(self):
+        return self._absolute_position
+
+    @override
+    def __str__(self):
+        return f"Line {self._line_number} Position {self._position}"

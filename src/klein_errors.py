@@ -8,4 +8,4 @@ class LexicalError(KleinError):
         super().__init__(*args)
 
     def __str__(self) -> str:
-        return f"Klein Lexical Error at position {self._position}: {super().__str__()}"
+        return f"Klein Lexical Error at {self._position}: {super().__str__()}"
