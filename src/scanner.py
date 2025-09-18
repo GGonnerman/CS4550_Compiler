@@ -7,10 +7,9 @@ IDENTIFIER_CHARACTERS = ALPHABET + INTEGERS + "_"
 PUNCTUATION = "(),:"
 OPERATORS = "+-*/<="
 SKIPPABLE = "\t\n ("
-DELIMITERS = PUNCTUATION + OPERATORS + SKIPPABLE + "_"
+DELIMITERS = PUNCTUATION + OPERATORS + SKIPPABLE
 KEYWORDS = [
     "integer",
-    "string",
     "boolean",
     "if",
     "then",
@@ -53,7 +52,7 @@ class Scanner:
 
         if update_position:
             self.position = self.working_position
-            self.has_terminated = token.is_eof()
+            self.has_terminated = token.is_a(TokenType.EOF)
         else:
             self.working_position = self.position
 
@@ -61,7 +60,7 @@ class Scanner:
 
     def _stage0(self):
         if self.working_position >= len(self.program):
-            return Token(TokenType.eof)
+            return Token(TokenType.EOF)
         self.accum = ""
         char = self.program[self.working_position]
         if char in ALPHABET:
@@ -96,12 +95,12 @@ class Scanner:
 
     def _categorize_identifier(self, identifier: str) -> Token:
         if identifier in BOOLEAN_LITERALS:
-            return Token(TokenType.boolean, self.accum)
+            return Token(TokenType.BOOLEAN, self.accum)
         if identifier in PRIMATIVE_IDENTIFIERS:
-            return Token(TokenType.primitive_identifier, self.accum)
+            return Token(TokenType.PRIMITIVE_IDENTIFIER, self.accum)
         if identifier in KEYWORDS:
-            return Token(TokenType.keyword, self.accum)
-        return Token(TokenType.identifier, self.accum)
+            return Token(TokenType.KEYWORD, self.accum)
+        return Token(TokenType.IDENTIFIER, self.accum)
 
     def _stage1(self) -> Token:
         if self.working_position >= len(self.program):
@@ -117,38 +116,53 @@ class Scanner:
 
     def _stage2(self) -> Token:
         if self.working_position >= len(self.program):
-            return Token(TokenType.int_token, self.accum)
+            return Token(TokenType.INTEGER, self.accum)
         char = self.program[self.working_position]
         if char in DELIMITERS:
-            return Token(TokenType.int_token, self.accum)
+            return Token(TokenType.INTEGER, self.accum)
         if char in INTEGERS:
             raise Exception("Integer cannot start with leading 0")
         raise Exception("Invalid char in integer")
 
     def _stage3(self) -> Token:
         if self.working_position >= len(self.program):
-            return Token(TokenType.int_token, self.accum)
+            return Token(TokenType.INTEGER, self.accum)
         char = self.program[self.working_position]
         if char in INTEGERS:
             self.accum += char
             self.working_position += 1
             return self._stage3()
         if char in DELIMITERS:
-            return Token(TokenType.int_token, self.accum)
+            return Token(TokenType.INTEGER, self.accum)
         raise Exception("Invalid char in integer")
 
+    def _categorize_opterator(self, operator: str):
+        if operator == "+":
+            return Token(TokenType.PLUS)
+        if operator == "-":
+            return Token(TokenType.MINUS)
+        if operator == "*":
+            return Token(TokenType.TIMES)
+        if operator == "/":
+            return Token(TokenType.DIVIDE)
+        if operator == "<":
+            return Token(TokenType.LESS_THAN)
+        if operator == "=":
+            return Token(TokenType.EQUAL)
+        raise Exception(f"Unable to categorize identifier: '{operator}'")
+
     def _stage4(self) -> Token:
-        return Token(TokenType.operator, self.accum)
+        return self._categorize_opterator(self.accum)
 
     def _stage5(self) -> Token | None:
         if self.working_position >= len(self.program):
-            return Token(TokenType.punctuation, self.accum)
+            return self._categorize_punctuation(self.accum)
         char = self.program[self.working_position]
         if char in "*":
             self.accum += char
             self.working_position += 1
             return self._stage6()
-        return Token(TokenType.punctuation, self.accum)
+        return self._categorize_punctuation(self.accum)
 
     def _stage6(self) -> Token | None:
         if self.working_position >= len(self.program):
@@ -179,8 +193,19 @@ class Scanner:
         # In theory could return token with type whitespace, but I don't
         # think whitespace is supposed to be a token.
 
+    def _categorize_punctuation(self, punctuation: str):
+        if punctuation == "(":
+            return Token(TokenType.LEFT_PAREN)
+        if punctuation == ")":
+            return Token(TokenType.RIGHT_PAREN)
+        if punctuation == ",":
+            return Token(TokenType.COMMA)
+        if punctuation == ":":
+            return Token(TokenType.COLON)
+        raise Exception(f"Unable to categorize identifier: '{punctuation}")
+
     def _stage10(self) -> Token:
-        return Token(TokenType.punctuation, self.accum)
+        return self._categorize_punctuation(self.accum)
 
     def has_next(self) -> bool:
         return not self.has_terminated

@@ -1,17 +1,25 @@
-from enum import IntEnum
+from enum import IntEnum, auto
 
 from typing_extensions import override
 
 
 class TokenType(IntEnum):
-    int_token = 0
-    identifier = 1
-    keyword = 2
-    boolean = 3
-    primitive_identifier = 4
-    punctuation = 5
-    operator = 6
-    eof = 7
+    INTEGER = auto()
+    IDENTIFIER = auto()
+    KEYWORD = auto()
+    BOOLEAN = auto()
+    PRIMITIVE_IDENTIFIER = auto()
+    LEFT_PAREN = auto()
+    RIGHT_PAREN = auto()
+    COMMA = auto()
+    COLON = auto()
+    PLUS = auto()
+    MINUS = auto()
+    TIMES = auto()
+    DIVIDE = auto()
+    LESS_THAN = auto()
+    EQUAL = auto()
+    EOF = auto()
 
 
 class Token:
@@ -19,51 +27,35 @@ class Token:
         self.token_type: TokenType = token_type
         self.token_value: str | None = token_value
 
-    def is_integer(self):
-        return self.token_type == TokenType.int_token
-
-    def is_identifier(self):
-        return self.token_type == TokenType.identifier
-
-    def is_keyword(self):
-        return self.token_type == TokenType.keyword
-
-    def is_boolean(self):
-        return self.token_type == TokenType.boolean
-
-    def is_primitive_identifier(self):
-        return self.token_type == TokenType.primitive_identifier
+    def is_a(self, token_type: TokenType) -> bool:
+        return self.token_type == token_type
 
     def is_punctuation(self):
-        return self.token_type == TokenType.punctuation
+        return self.token_type in [
+            TokenType.LEFT_PAREN,
+            TokenType.RIGHT_PAREN,
+            TokenType.COMMA,
+            TokenType.COLON,
+        ]
 
     def is_operator(self):
-        return self.token_type == TokenType.operator
-
-    def is_eof(self):
-        return self.token_type == TokenType.eof
+        return self.token_type in [
+            TokenType.PLUS,
+            TokenType.MINUS,
+            TokenType.TIMES,
+            TokenType.DIVIDE,
+            TokenType.LESS_THAN,
+            TokenType.EQUAL,
+        ]
 
     def value(self):
         return self.token_value
 
     @override
     def __repr__(self):
-        if self.is_integer():
-            return f"integer = {self.token_value}"
-        if self.is_identifier():
-            return f"identifier = {self.token_value}"
-        if self.is_keyword():
-            return f"keyword = {self.token_value}"
-        if self.is_boolean():
-            return f"boolean = {self.token_value}"
-        if self.is_primitive_identifier():
-            return f"primitive = {self.token_value}"
-        if self.is_punctuation():
-            return f"punctuation = {self.token_value}"
-        if self.is_operator():
-            return f"operator = {self.token_value}"
-        if self.is_eof():
-            return "eof"
-        raise ValueError(
-            f"Unknown token type {self.token_type} with value {self.token_value}",
-        )
+        display = self.token_type.name.lower()
+        if self.token_value is not None:
+            # Just makes sure the tabs all line up nicely
+            display += " " * (10 - len(display))
+            display += f"\t{self.value()}"
+        return display
