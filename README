@@ -1,0 +1,6 @@
+Compile Squad
+
+
+Known Bugs:
+If you do an identifier or # over 1000 characters it will crash
+
