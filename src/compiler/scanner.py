@@ -1,7 +1,6 @@
-from typing_extensions import SupportsIndex, override
-
-from klein_errors import KleinError, LexicalError
-from token_agl import Token, TokenType
+from compiler.klein_errors import KleinError, LexicalError
+from compiler.position import Position
+from compiler.token_agl import Token, TokenType
 
 ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 NON_ZERO_INTEGERS = "123456789"
@@ -94,12 +93,18 @@ class Scanner:
             self.accum += char
             self.working_position += 1
             return self._stage10()
-        raise LexicalError(f'Unknown character "{char}" when looking for next token.')
+        raise LexicalError(
+            f'Unknown character "{char}" when looking for next token.',
+            self.working_position,
+        )
 
     def _categorize_identifier(self, identifier: str) -> Token:
         max_identifier_length = 256
         if len(identifier) > max_identifier_length:
-            raise LexicalError("Identifiers cannot be longer than 256 characters")
+            raise LexicalError(
+                "Identifiers cannot be longer than 256 characters",
+                self.working_position,
+            )
         if identifier in BOOLEAN_LITERALS:
             return Token(TokenType.BOOLEAN, self.accum)
         if identifier in PRIMATIVE_IDENTIFIERS:
@@ -118,9 +123,13 @@ class Scanner:
             return self._stage1()
         if char in DELIMITERS:
             return self._categorize_identifier(self.accum)
+        debug_character = char
+        if not char.isprintable():
+            debug_character = f"utf8:{ord(char)}"
+
         raise LexicalError(
+            f"Invalid character {debug_character} in identifier. Only alphanumeric characters and underscores allowed.",
             self.working_position,
-            f'Invalid character "{char}" in identifier. Only alphanumeric characters and underscores allowed.',
         )
 
     def _stage2(self) -> Token:
@@ -130,8 +139,14 @@ class Scanner:
         if char in DELIMITERS:
             return Token(TokenType.INTEGER, self.accum)
         if char in INTEGERS:
-            raise LexicalError("Integer cannot start with leading 0")
-        raise LexicalError("Invalid char in integer")
+            raise LexicalError(
+                "Integer cannot start with leading 0",
+                self.working_position,
+            )
+        raise LexicalError(
+            f'Invalid character "{char}" in integer',
+            self.working_position,
+        )
 
     def _stage3(self) -> Token:
         if self.working_position >= len(self.program):
@@ -143,7 +158,7 @@ class Scanner:
             return self._stage3()
         if char in DELIMITERS:
             return Token(TokenType.INTEGER, self.accum)
-        raise LexicalError("Invalid char in integer")
+        raise LexicalError("Invalid char in integer", self.working_position)
 
     def _categorize_opterator(self, operator: str):
         if operator == "+":
@@ -158,7 +173,10 @@ class Scanner:
             return Token(TokenType.LESS_THAN)
         if operator == "=":
             return Token(TokenType.EQUAL)
-        raise LexicalError(f"Unable to categorize identifier: '{operator}'")
+        raise LexicalError(
+            f'Unable to categorize identifier: "{operator}"',
+            self.working_position,
+        )
 
     def _stage4(self) -> Token:
         return self._categorize_opterator(self.accum)
@@ -180,6 +198,7 @@ class Scanner:
             if self.working_position >= len(self.program):
                 raise LexicalError(
                     "All comments must be terminated before program ends",
+                    self.working_position,
                 )
 
             char = self.program[self.working_position]
@@ -192,7 +211,10 @@ class Scanner:
 
     def _stage7(self) -> Token | None:
         if self.working_position >= len(self.program):
-            raise LexicalError("All comments must be terminated before program ends")
+            raise LexicalError(
+                "All comments must be terminated before program ends",
+                self.working_position,
+            )
         char = self.program[self.working_position]
         self.accum += char
         self.working_position += 1
@@ -221,62 +243,13 @@ class Scanner:
             return Token(TokenType.COMMA)
         if punctuation == ":":
             return Token(TokenType.COLON)
-        raise LexicalError(f"Unable to categorize identifier: '{punctuation}")
+        raise LexicalError(
+            f'Unable to categorize identifier: "{punctuation}"',
+            self.working_position,
+        )
 
     def _stage10(self) -> Token:
         return self._categorize_punctuation(self.accum)
 
     def has_next(self) -> bool:
         return not self.has_terminated
-
-
-class Position(SupportsIndex):
-    def __init__(
-        self,
-        line_number: int = 0,
-        position: int = 0,  # Should line number be 0 or 1 indexed?
-        absolute_position: int = 0,
-    ):
-        self._line_number: int = line_number
-        self._position: int = position
-        self._absolute_position: int = absolute_position
-
-    def load(self, position: "Position"):
-        self._line_number = position.get_line_number()
-        self._position = position.get_position()
-        self._absolute_position = position.get_absolute_position()
-
-    def __iadd__(self, other: object):
-        if not isinstance(other, int):
-            raise TypeError("Cannot add non-integer to position")
-        self._absolute_position += other
-        self._position += other
-        return self
-
-    @override
-    def __index__(self) -> int:
-        return self._absolute_position
-
-    @override
-    def __eq__(self, other: object):
-        return self._absolute_position == other
-
-    def __ge__(self, other: int):
-        return self._absolute_position >= other
-
-    def add_newline(self):
-        self._position = 0
-        self._line_number += 1
-
-    def get_line_number(self):
-        return self._line_number
-
-    def get_position(self):
-        return self._position
-
-    def get_absolute_position(self):
-        return self._absolute_position
-
-    @override
-    def __str__(self):
-        return f"Line {self._line_number} Position {self._position}"

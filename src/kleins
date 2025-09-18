@@ -1,4 +1,0 @@
-#!/bin/bash
-
-PROGRAM_CONTENT=$(cat $1)
-python token_lister.py "$PROGRAM_CONTENT"
