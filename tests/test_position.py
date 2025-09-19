@@ -56,3 +56,5 @@ class TestPosition:
         assert position != alt, (
             "Positions should not be equal when absolute position differ"
         )
+        alt += 1
+        assert position == alt, "Positions should be equal after both incrementing"

@@ -8,7 +8,7 @@ INTEGERS = "0" + NON_ZERO_INTEGERS
 IDENTIFIER_CHARACTERS = ALPHABET + INTEGERS + "_"
 PUNCTUATION = "(),:"
 OPERATORS = "+-*/<="
-SKIPPABLE = "\t\n ("
+SKIPPABLE = "\t\n\r ("
 DELIMITERS = PUNCTUATION + OPERATORS + SKIPPABLE
 KEYWORDS = [
     "integer",
@@ -45,7 +45,7 @@ class Scanner:
 
     def _next(self, *, update_position: bool = True):
         if self.has_terminated:
-            raise KleinError("Cannot call next on terminated scanner")
+            raise KleinError("Cannot call next on a terminated scanner")
 
         token: Token | None = None
         while token is None:
@@ -128,7 +128,7 @@ class Scanner:
             debug_character = f"utf8:{ord(char)}"
 
         raise LexicalError(
-            f"Invalid character {debug_character} in identifier. Only alphanumeric characters and underscores allowed.",
+            f'Invalid character "{debug_character}" in identifier. Only alphanumeric characters and underscores allowed.',
             self.working_position,
         )
 
@@ -158,7 +158,10 @@ class Scanner:
             return self._stage3()
         if char in DELIMITERS:
             return Token(TokenType.INTEGER, self.accum)
-        raise LexicalError("Invalid char in integer", self.working_position)
+        raise LexicalError(
+            f'Invalid character "{char}" in integer',
+            self.working_position,
+        )
 
     def _categorize_opterator(self, operator: str):
         if operator == "+":

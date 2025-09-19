@@ -66,3 +66,12 @@ class Token:
             display += " " * (20 - len(display))
             display += f"\t{self.value()}"
         return display
+
+    @override
+    def __eq__(self, other: object):
+        if not isinstance(other, Token):
+            return False
+        return (
+            self.token_type == other.token_type
+            and self.token_value == other.token_value
+        )
