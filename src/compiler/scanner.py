@@ -163,7 +163,7 @@ class Scanner:
             self.working_position,
         )
 
-    def _categorize_opterator(self, operator: str):
+    def _categorize_operator(self, operator: str):
         if operator == "+":
             return Token(TokenType.PLUS)
         if operator == "-":
@@ -182,7 +182,7 @@ class Scanner:
         )
 
     def _stage4(self) -> Token:
-        return self._categorize_opterator(self.accum)
+        return self._categorize_operator(self.accum)
 
     def _stage5(self) -> Token | None:
         if self.working_position >= len(self.program):
@@ -207,7 +207,7 @@ class Scanner:
             char = self.program[self.working_position]
             self.accum += char
             self.working_position += 1
-            if char == "\n":
+            if char in ["\n", "\r"]:
                 self.working_position.add_newline()
             if char in "*":
                 return self._stage7()
@@ -221,7 +221,7 @@ class Scanner:
         char = self.program[self.working_position]
         self.accum += char
         self.working_position += 1
-        if char == "\n":
+        if char in ["\n", "\r"]:
             self.working_position.add_newline()
         if char in ")":
             return self._stage8()
@@ -231,7 +231,7 @@ class Scanner:
         return
 
     def _stage9(self) -> None:
-        if self.accum == "\n":
+        if self.accum in ["\n", "\r"]:
             self.working_position.add_newline()
         # Don't return anything; this is whitespace which is ignored
         # In theory could return token with type whitespace, but I don't

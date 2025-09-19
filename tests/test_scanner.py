@@ -36,12 +36,13 @@ def test_peek_doesnt_move_ahead():
 
 
 def test_scan_basic_identifiers():
-    s = Scanner("abc aBC a_BC a0b a0_1Bb")
+    s = Scanner("abc aBC a_BC a0b a0_1Bb adsf89__09123d____")
     assert s.next() == Token(TokenType.IDENTIFIER, "abc")
     assert s.next() == Token(TokenType.IDENTIFIER, "aBC")
     assert s.next() == Token(TokenType.IDENTIFIER, "a_BC")
     assert s.next() == Token(TokenType.IDENTIFIER, "a0b")
     assert s.next() == Token(TokenType.IDENTIFIER, "a0_1Bb")
+    assert s.next() == Token(TokenType.IDENTIFIER, "adsf89__09123d____")
 
 
 def test_raises_on_invalid_identifiers():
@@ -167,6 +168,14 @@ def test_comments_ignored():
         "(* this is a long\t\n\rmultiine comment that 012 contains in&!@^#valid identifiers * ) (* and more *)",
     )
     assert s.next() == Token(TokenType.END_OF_FILE)
+    s = Scanner(
+        "(**)",
+    )
+    assert s.next() == Token(TokenType.END_OF_FILE)
+    s = Scanner(
+        "(* *)",
+    )
+    assert s.next() == Token(TokenType.END_OF_FILE)
 
 
 def test_trailing_comment_raises():
@@ -177,6 +186,32 @@ def test_trailing_comment_raises():
         str(excinfo.value)
         == "Klein Lexical Error at Line 0 Position 7: All comments must be terminated before program ends"
     )
+
+
+def test_position_tracks():
+    s = Scanner("hey\nhi\r  \r once")
+    for _ in s:
+        pass
+    assert s.position.get_position() == 5
+    assert s.position.get_absolute_position() == 15
+    assert s.position.get_line_number() == 3
+
+
+def test_position_tracks_in_comment():
+    s = Scanner("(* \n * \n ) \r * \r ) *)")
+    _ = s.next()
+    assert s.position.get_position() == 5, "Correct counting of spaces after newline"
+    assert s.position.get_absolute_position() == 21, (
+        "Absolute position updated across comment"
+    )
+    assert s.position.get_line_number() == 4
+    s = Scanner("(* *)Hi")
+    _ = s.next()
+    assert s.position.get_position() == 7, "Correct counting of spaces after newline"
+    assert s.position.get_absolute_position() == 7, (
+        "Absolute position updated across comment"
+    )
+    assert s.position.get_line_number() == 0
 
 
 def test_delimiters_function():
@@ -192,3 +227,16 @@ def test_delimiters_function():
     for delimiter_type in delimiter_types:
         assert s.next() == Token(TokenType.IDENTIFIER, "abc")
         assert s.next() == Token(delimiter_type)
+
+
+def test_scanner_iter():
+    s = Scanner("abc\nabc\rabc")
+    tokens = [
+        Token(TokenType.IDENTIFIER, "abc"),
+        Token(TokenType.IDENTIFIER, "abc"),
+        Token(TokenType.IDENTIFIER, "abc"),
+        Token(TokenType.END_OF_FILE),
+    ]
+    for token in s:
+        assert token == tokens[0]
+        _ = tokens.pop(0)
