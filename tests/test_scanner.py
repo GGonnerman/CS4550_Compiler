@@ -188,11 +188,12 @@ def test_detects_operators():
 
 
 def test_detects_punctuation():
-    s = Scanner("( ) , :")
+    s = Scanner("( ) , : (")
     assert s.next() == Token(TokenType.LEFT_PAREN)
     assert s.next() == Token(TokenType.RIGHT_PAREN)
     assert s.next() == Token(TokenType.COMMA)
     assert s.next() == Token(TokenType.COLON)
+    assert s.next() == Token(TokenType.LEFT_PAREN)
 
 
 def test_whitespace_ignored():
@@ -226,6 +227,13 @@ def test_trailing_comment_raises():
         str(excinfo.value)
         == "Klein Lexical Error at Line 0 Position 7: All comments must be terminated before program ends"
     )
+    s = Scanner("(* test*")
+    with pytest.raises(LexicalError) as excinfo:
+        _ = s.next()
+    assert (
+        str(excinfo.value)
+        == "Klein Lexical Error at Line 0 Position 8: All comments must be terminated before program ends"
+    )
 
 
 def test_position_tracks():
@@ -238,10 +246,10 @@ def test_position_tracks():
 
 
 def test_position_tracks_in_comment():
-    s = Scanner("(* \n * \n ) \r * \r ) *)")
+    s = Scanner("(* \n *\n ) \r * \r ) *)")
     _ = s.next()
     assert s.position.get_position() == 5, "Correct counting of spaces after newline"
-    assert s.position.get_absolute_position() == 21, (
+    assert s.position.get_absolute_position() == 20, (
         "Absolute position updated across comment"
     )
     assert s.position.get_line_number() == 4

@@ -7,7 +7,7 @@ class Position(SupportsIndex):
     def __init__(
         self,
         line_number: int = 0,
-        position: int = 0,  # Should line number be 0 or 1 indexed?
+        position: int = 0,
         absolute_position: int = 0,
     ):
         self._line_number: int = line_number
