@@ -1,4 +1,8 @@
-## Special Identifiers
+The scanner is the culmination of a number of different fsm which have been merged together. We will first go through each individual type, their regular expression, and the fsm generated. Then, will we take a look at the fsm which combines these all.
+
+## Reserved Words 
+Klein contains a number of reserved words. While a regular expression can be generated for these tokens, it is significantly easier to treat these as normal identifiers and then before returning the token type, looking up to see if the identifier is a reserved keyword. Therefore, this is the approach we will take for the scanner and for brevity sake a fsm has been excluded since it would not correlate to actual code.
+
 ### Keywords
 integer
 boolean
@@ -9,46 +13,74 @@ not
 and
 or
 function
+
+#### Regular Expression
+integer|boolean|if|then|else|not|and|or|function
+
 ### Primitive Identifier
 print
+
+#### Regular Expression
+print
+
 ### Boolean Literal
 true false
 
-Potentially best to have these in a dictionary and lookup afterwards
+#### Regular Expression
+true|false
 
 ## Punctuation
-( ) , : punctuation
+( ) , :
 
 ### Regular expression
 (\(|\)|,|:)
 
+### FSM
+Found at punctuation-fsm.jff
+
 ## Operators
-+ - / < = operators
++ - / < =
 
 ### Regular expression
 (+|-|/|<|=)
 
+### FSM
+Found at operators-fsm.jff
+
 ## Identifiers
-[a-zA-Z][a-zA-Z0-9_]*
-- Starts with a letter than any number of letters/digits/underscore
-- Must be no longer than 256; I don't recall how we were to enforce this
+- Starts with a letter followed by any number of letters/digits/underscores
+- Must be no longer than 256 characters long
 - Case sensitive
 
 ### Reguar expression
 [a-zA-Z][a-zA-Z0-9_]*
 
+### FSM
+Found at identifiers-fsm.jff
+
 ## Integer Literal
-- Must be 0 - 2^{31}-1
+- Must be in the range 0 - 2^{31}-1 inclusive
 - Leading 0s not allowed
 - Always positive (no leading + or -)
 
 ### Regular expression
 0 | [1-9][0-9]*
 
+### FSM
+Found at integer-literal-fsm.jff
+
 ## Skippable Characters
 space, tab "\t", end-line "\n" or "\r"
 May not appear inside literal, identifier, keyword, or operator
-Comment is anything between (* and *)
+Comment is anything from (* to the first instance of *)
 
 ### Regular expression
-(\t|\n|\r|\(*.**\))
+(\t|\n|\r|\(*(^*\))*\))
+
+### FSM
+Found at skippable-fsm.jff
+
+## Everything together
+The combination of the state machines is found at full-fsm.jff notable changes will be discussed below.
+Added q5 as a disambiguation between an operator and beginning of a comment.
+Nodes q4, q9, and q10 represent many possible distinct values within a single type.
