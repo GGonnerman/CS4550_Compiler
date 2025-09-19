@@ -53,6 +53,8 @@ Produced by the **Compile Squad**
 
 - These instructions assume that you are running a UNIX enviornment with the following packages/program available and installed
   - python3
+    - Running `python3` **has** to execute python with version 3.11
+    - If this is not the case, in `Makefile` line 2, python3 can be changed to a different alias (e.g., `python3.11` or `python`)
   - make
   - git (optional)
 
