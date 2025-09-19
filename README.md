@@ -45,7 +45,7 @@ Produced by the **Compile Squad**
 
 ### Scanner:
 
-- If you do an identifier or # over 1000 characters it will crash
+- If you do an identifier or integer over 1000 characters long it will crash (due to recursion depth)
 
 ## Getting Started
 
@@ -89,7 +89,7 @@ Produced by the **Compile Squad**
 
 - From the root, run `make test_all`
 
-###### Running a Specific Subset of Tests
+##### Running a Specific Subset of Tests
 
 - Activate the virtual enviornment
   - This can be done by (from the root) running `source ./.venv/bin/activate`
