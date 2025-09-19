@@ -35,6 +35,23 @@ def test_peek_doesnt_move_ahead():
     assert s.has_next(), "Peek shouldn't have altered postition"
 
 
+def test_unknown_character():
+    s = Scanner("_hi")
+    with pytest.raises(LexicalError) as excinfo:
+        _ = s.next()
+    assert (
+        str(excinfo.value)
+        == 'Klein Lexical Error at Line 0 Position 0: Illegal character "_" when looking for next token.'
+    )
+    s = Scanner("@hi")
+    with pytest.raises(LexicalError) as excinfo:
+        _ = s.next()
+    assert (
+        str(excinfo.value)
+        == 'Klein Lexical Error at Line 0 Position 0: Illegal character "@" when looking for next token.'
+    )
+
+
 def test_scan_basic_identifiers():
     s = Scanner("abc aBC a_BC a0b a0_1Bb adsf89__09123d____")
     assert s.next() == Token(TokenType.IDENTIFIER, "abc")
@@ -106,7 +123,7 @@ def test_raises_on_invalid_ints():
     assert (
         str(excinfo.value)
         == 'Klein Lexical Error at Line 0 Position 1: Invalid character "k" in integer'
-    ), "Should show message about unknown character in integer"
+    ), "Should show message about invalid character in integer"
 
     s = Scanner("100k")
     with pytest.raises(LexicalError) as excinfo:
@@ -114,7 +131,30 @@ def test_raises_on_invalid_ints():
     assert (
         str(excinfo.value)
         == 'Klein Lexical Error at Line 0 Position 3: Invalid character "k" in integer'
-    ), "Should show message about unknown character in integer"
+    ), "Should show message about invalid character in integer"
+
+
+def test_integer_bounds():
+    s = Scanner("0")
+    assert s.next() == Token(TokenType.INTEGER, "0")
+    int_limit = (2**31) - 1
+    s = Scanner(str(int_limit))
+    assert s.next() == Token(TokenType.INTEGER, str(int_limit))
+    overflow = int_limit + 1
+    s = Scanner(str(overflow))
+    with pytest.raises(LexicalError) as excinfo:
+        _ = s.next()
+    assert (
+        str(excinfo.value)
+        == "Klein Lexical Error at Line 0 Position 10: Integer literal must be bounded between 0 (incl) and 2147483647 (incl)."
+    )
+    s = Scanner(str(overflow) + ")")
+    with pytest.raises(LexicalError) as excinfo:
+        _ = s.next()
+    assert (
+        str(excinfo.value)
+        == "Klein Lexical Error at Line 0 Position 10: Integer literal must be bounded between 0 (incl) and 2147483647 (incl)."
+    )
 
 
 def test_detects_special_identifiers():

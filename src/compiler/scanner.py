@@ -94,7 +94,7 @@ class Scanner:
             self.working_position += 1
             return self._stage10()
         raise LexicalError(
-            f'Unknown character "{char}" when looking for next token.',
+            f'Illegal character "{char}" when looking for next token.',
             self.working_position,
         )
 
@@ -132,9 +132,26 @@ class Scanner:
             self.working_position,
         )
 
+    def _validate_integer(self, value: str) -> Token:
+        MIN_INTEGER_INCL = 0
+        MAX_INTEGER_INCL = (2**31) - 1
+        try:
+            numeric_value = int(value)
+        except Exception:
+            raise LexicalError(  # noqa: B904
+                f'Encountered illegal integer "{value}"',
+                self.working_position,
+            )
+        if numeric_value < MIN_INTEGER_INCL or numeric_value > MAX_INTEGER_INCL:
+            raise LexicalError(
+                f"Integer literal must be bounded between {MIN_INTEGER_INCL} (incl) and {MAX_INTEGER_INCL} (incl).",
+                self.working_position,
+            )
+        return Token(TokenType.INTEGER, self.accum)
+
     def _stage2(self) -> Token:
         if self.working_position >= len(self.program):
-            return Token(TokenType.INTEGER, self.accum)
+            return self._validate_integer(self.accum)
         char = self.program[self.working_position]
         if char in DELIMITERS:
             return Token(TokenType.INTEGER, self.accum)
@@ -150,14 +167,14 @@ class Scanner:
 
     def _stage3(self) -> Token:
         if self.working_position >= len(self.program):
-            return Token(TokenType.INTEGER, self.accum)
+            return self._validate_integer(self.accum)
         char = self.program[self.working_position]
         if char in INTEGERS:
             self.accum += char
             self.working_position += 1
             return self._stage3()
         if char in DELIMITERS:
-            return Token(TokenType.INTEGER, self.accum)
+            return self._validate_integer(self.accum)
         raise LexicalError(
             f'Invalid character "{char}" in integer',
             self.working_position,
@@ -177,7 +194,7 @@ class Scanner:
         if operator == "=":
             return Token(TokenType.EQUAL)
         raise LexicalError(
-            f'Unable to categorize identifier: "{operator}"',
+            f'Unable to categorize operator: "{operator}"',
             self.working_position,
         )
 
@@ -247,7 +264,7 @@ class Scanner:
         if punctuation == ":":
             return Token(TokenType.COLON)
         raise LexicalError(
-            f'Unable to categorize identifier: "{punctuation}"',
+            f'Unable to categorize punctuation: "{punctuation}"',
             self.working_position,
         )
 
