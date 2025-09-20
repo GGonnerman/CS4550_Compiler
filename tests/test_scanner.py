@@ -237,19 +237,19 @@ def test_trailing_comment_raises():
 
 
 def test_position_tracks():
-    s = Scanner("hey\nhi\r  \r once")
+    s = Scanner("hey\nhi\n  \r once")
     for _ in s:
         pass
-    assert s.position.get_position() == 5
+    assert s.position.get_position() == 8
     assert s.position.get_absolute_position() == 15
-    assert s.position.get_line_number() == 3
+    assert s.position.get_line_number() == 2
 
 
 def test_position_tracks_in_comment():
-    s = Scanner("(* \n *\n ) \r * \r ) *)")
+    s = Scanner("(* \n *\n ) \r\n * \n ) *)")
     _ = s.next()
     assert s.position.get_position() == 5, "Correct counting of spaces after newline"
-    assert s.position.get_absolute_position() == 20, (
+    assert s.position.get_absolute_position() == 21, (
         "Absolute position updated across comment"
     )
     assert s.position.get_line_number() == 4

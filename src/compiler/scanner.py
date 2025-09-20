@@ -224,7 +224,7 @@ class Scanner:
             char = self.program[self.working_position]
             self.accum += char
             self.working_position += 1
-            if char in ["\n", "\r"]:
+            if char == "\n":
                 self.working_position.add_newline()
             if char in "*":
                 return self._stage7()
@@ -238,7 +238,7 @@ class Scanner:
         char = self.program[self.working_position]
         self.accum += char
         self.working_position += 1
-        if char in ["\n", "\r"]:
+        if char == "\n":
             self.working_position.add_newline()
         if char in ")":
             return self._stage8()
@@ -248,7 +248,7 @@ class Scanner:
         return
 
     def _stage9(self) -> None:
-        if self.accum in ["\n", "\r"]:
+        if self.accum == "\n":
             self.working_position.add_newline()
         # Don't return anything; this is whitespace which is ignored
         # In theory could return token with type whitespace, but I don't
