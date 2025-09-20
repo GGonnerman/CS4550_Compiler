@@ -3,4 +3,4 @@ setup:
 	./.venv/bin/pip install -r ./src/compiler/requirements.txt -e . --config-settings editable_mode=strict
 
 test_all:
-	pytest
+	./.venv/bin/pytest
