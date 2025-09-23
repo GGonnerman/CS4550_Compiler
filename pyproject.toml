@@ -1,0 +1,17 @@
+# contents of pyproject.toml
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "compiler"
+version = "0.1.0"
+requires-python = ">=3.11"
+
+[project.scripts]
+klein_list_tokens = "compiler.__main__:list_tokens"
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]

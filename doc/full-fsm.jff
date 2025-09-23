@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><!--Created with JFLAP 7.1.--><structure>
+	<type>fa</type>
+	<automaton>
+		<!--The list of states.-->
+		<state id="0" name="q0">
+			<x>57.0</x>
+			<y>132.0</y>
+			<initial/>
+		</state>
+		<state id="1" name="q1">
+			<x>148.0</x>
+			<y>-32.0</y>
+			<final/>
+		</state>
+		<state id="2" name="q2">
+			<x>177.0</x>
+			<y>14.0</y>
+			<final/>
+		</state>
+		<state id="3" name="q3">
+			<x>223.0</x>
+			<y>67.0</y>
+			<final/>
+		</state>
+		<state id="4" name="q4">
+			<x>194.0</x>
+			<y>132.0</y>
+			<final/>
+		</state>
+		<state id="5" name="q5">
+			<x>168.0</x>
+			<y>192.0</y>
+			<final/>
+		</state>
+		<state id="6" name="q9">
+			<x>142.0</x>
+			<y>235.0</y>
+			<final/>
+		</state>
+		<state id="7" name="q6">
+			<x>274.0</x>
+			<y>188.0</y>
+		</state>
+		<state id="8" name="q7">
+			<x>397.0</x>
+			<y>167.0</y>
+		</state>
+		<state id="9" name="q8">
+			<x>495.0</x>
+			<y>165.0</y>
+			<final/>
+		</state>
+		<state id="10" name="q10">
+			<x>92.0</x>
+			<y>266.0</y>
+			<final/>
+		</state>
+		<!--The list of transitions.-->
+		<transition>
+			<from>3</from>
+			<to>3</to>
+			<read>[0-9]</read>
+		</transition>
+		<transition>
+			<from>8</from>
+			<to>9</to>
+			<read>)</read>
+		</transition>
+		<transition>
+			<from>0</from>
+			<to>2</to>
+			<read>0</read>
+		</transition>
+		<transition>
+			<from>7</from>
+			<to>7</to>
+			<read>^*</read>
+		</transition>
+		<transition>
+			<from>5</from>
+			<to>7</to>
+			<read>*</read>
+		</transition>
+		<transition>
+			<from>0</from>
+			<to>10</to>
+			<read>) , :</read>
+		</transition>
+		<transition>
+			<from>0</from>
+			<to>4</to>
+			<read>+ - * / &lt; =</read>
+		</transition>
+		<transition>
+			<from>8</from>
+			<to>7</to>
+			<read>^)</read>
+		</transition>
+		<transition>
+			<from>7</from>
+			<to>8</to>
+			<read>*</read>
+		</transition>
+		<transition>
+			<from>0</from>
+			<to>5</to>
+			<read>(</read>
+		</transition>
+		<transition>
+			<from>0</from>
+			<to>3</to>
+			<read>[1-9]</read>
+		</transition>
+		<transition>
+			<from>1</from>
+			<to>1</to>
+			<read>[a-zA-Z0-9_]</read>
+		</transition>
+		<transition>
+			<from>0</from>
+			<to>6</to>
+			<read>\t \n \r "  "</read>
+		</transition>
+		<transition>
+			<from>0</from>
+			<to>1</to>
+			<read>[a-zA-Z]</read>
+		</transition>
+	</automaton>
+</structure>
