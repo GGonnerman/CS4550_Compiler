@@ -1,6 +1,6 @@
 from compiler.klein_errors import KleinError, LexicalError
 from compiler.position import Position
-from compiler.token_agl import Token, TokenType
+from compiler.token import Token, TokenType
 
 ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 NON_ZERO_INTEGERS = "123456789"
@@ -62,7 +62,7 @@ class Scanner:
 
     def _stage0(self):
         if self.working_position >= len(self.program):
-            return Token(TokenType.END_OF_FILE)
+            return Token(self.position.copy(), TokenType.END_OF_FILE)
         self.accum = ""
         char = self.program[self.working_position]
         if char in ALPHABET:
@@ -106,12 +106,16 @@ class Scanner:
                 self.working_position,
             )
         if identifier in BOOLEAN_LITERALS:
-            return Token(TokenType.BOOLEAN, self.accum)
+            return Token(self.position.copy(), TokenType.BOOLEAN, self.accum)
         if identifier in PRIMATIVE_IDENTIFIERS:
-            return Token(TokenType.PRIMITIVE_IDENTIFIER, self.accum)
+            return Token(
+                self.position.copy(),
+                TokenType.PRIMITIVE_IDENTIFIER,
+                self.accum,
+            )
         if identifier in KEYWORDS:
-            return Token(TokenType.KEYWORD, self.accum)
-        return Token(TokenType.IDENTIFIER, self.accum)
+            return Token(self.position.copy(), TokenType.KEYWORD, self.accum)
+        return Token(self.position.copy(), TokenType.IDENTIFIER, self.accum)
 
     def _stage1(self) -> Token:
         if self.working_position >= len(self.program):
@@ -133,8 +137,8 @@ class Scanner:
         )
 
     def _validate_integer(self, value: str) -> Token:
-        MIN_INTEGER_INCL = 0
-        MAX_INTEGER_INCL = (2**31) - 1
+        min_integer_incl = 0
+        max_integer_incl = (2**31) - 1
         try:
             numeric_value = int(value)
         except Exception:
@@ -142,19 +146,19 @@ class Scanner:
                 f'Encountered illegal integer "{value}"',
                 self.working_position,
             )
-        if numeric_value < MIN_INTEGER_INCL or numeric_value > MAX_INTEGER_INCL:
+        if numeric_value < min_integer_incl or numeric_value > max_integer_incl:
             raise LexicalError(
-                f"Integer literal must be bounded between {MIN_INTEGER_INCL} (incl) and {MAX_INTEGER_INCL} (incl).",
+                f"Integer literal must be bounded between {min_integer_incl} (incl) and {max_integer_incl} (incl).",
                 self.working_position,
             )
-        return Token(TokenType.INTEGER, self.accum)
+        return Token(self.position.copy(), TokenType.INTEGER, self.accum)
 
     def _stage2(self) -> Token:
         if self.working_position >= len(self.program):
             return self._validate_integer(self.accum)
         char = self.program[self.working_position]
         if char in DELIMITERS:
-            return Token(TokenType.INTEGER, self.accum)
+            return Token(self.position.copy(), TokenType.INTEGER, self.accum)
         if char in INTEGERS:
             raise LexicalError(
                 "Integer cannot start with leading 0",
@@ -182,17 +186,17 @@ class Scanner:
 
     def _categorize_operator(self, operator: str):
         if operator == "+":
-            return Token(TokenType.PLUS)
+            return Token(self.position.copy(), TokenType.PLUS)
         if operator == "-":
-            return Token(TokenType.MINUS)
+            return Token(self.position.copy(), TokenType.MINUS)
         if operator == "*":
-            return Token(TokenType.TIMES)
+            return Token(self.position.copy(), TokenType.TIMES)
         if operator == "/":
-            return Token(TokenType.DIVIDE)
+            return Token(self.position.copy(), TokenType.DIVIDE)
         if operator == "<":
-            return Token(TokenType.LESS_THAN)
+            return Token(self.position.copy(), TokenType.LESS_THAN)
         if operator == "=":
-            return Token(TokenType.EQUAL)
+            return Token(self.position.copy(), TokenType.EQUAL)
         raise LexicalError(
             f'Unable to categorize operator: "{operator}"',
             self.working_position,
@@ -256,13 +260,13 @@ class Scanner:
 
     def _categorize_punctuation(self, punctuation: str):
         if punctuation == "(":
-            return Token(TokenType.LEFT_PAREN)
+            return Token(self.position.copy(), TokenType.LEFT_PAREN)
         if punctuation == ")":
-            return Token(TokenType.RIGHT_PAREN)
+            return Token(self.position.copy(), TokenType.RIGHT_PAREN)
         if punctuation == ",":
-            return Token(TokenType.COMMA)
+            return Token(self.position.copy(), TokenType.COMMA)
         if punctuation == ":":
-            return Token(TokenType.COLON)
+            return Token(self.position.copy(), TokenType.COLON)
         raise LexicalError(
             f'Unable to categorize punctuation: "{punctuation}"',
             self.working_position,

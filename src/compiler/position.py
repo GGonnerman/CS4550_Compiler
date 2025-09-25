@@ -14,6 +14,13 @@ class Position(SupportsIndex):
         self._position: int = position
         self._absolute_position: int = absolute_position
 
+    def copy(self):
+        return Position(
+            self._line_number,
+            self._position,
+            self._absolute_position,
+        )
+
     def load(self, position: "Position"):
         self._line_number = position.get_line_number()
         self._position = position.get_position()

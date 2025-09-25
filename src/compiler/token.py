@@ -2,6 +2,8 @@ from enum import IntEnum, auto
 
 from typing_extensions import override
 
+from compiler.position import Position
+
 
 class TokenType(IntEnum):
     INTEGER = auto()
@@ -23,7 +25,13 @@ class TokenType(IntEnum):
 
 
 class Token:
-    def __init__(self, token_type: TokenType, token_value: str | None = None):
+    def __init__(
+        self,
+        position: Position,
+        token_type: TokenType,
+        token_value: str | None = None,
+    ):
+        self.position: Position = position
         self.token_type: TokenType = token_type
         self.token_value: str | None = token_value
 
