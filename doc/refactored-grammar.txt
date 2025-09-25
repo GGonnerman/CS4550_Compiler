@@ -1,3 +1,10 @@
+// Summary of Changes:
+// Changed formal parameters by left factoring to extract "FORMAL-PARAMETERS-REST"
+// Changed expression by first eliminating left recursion, then left factoring out "EXPRESSION-REST"
+// Changed term by rewriting to eliminate left recursion and then left factoring by adding TERM-REST
+// Changed factor to eliminate ambiguity on "IDENTIFIER" token by adding "FACTOR-REST" when IDENTIFIER is encountered
+// Changed formal arguments to eliminate ambiguity when EXPRESSION is encountered by adding FORMAL-ARGUMENTS-REST
+ 
             <PROGRAM> ::= <DEFINITION-LIST>
 
     <DEFINITION-LIST> ::= ε
@@ -9,8 +16,11 @@
      <PARAMETER-LIST> ::= ε
                         | <FORMAL-PARAMETERS>
 
-  <FORMAL-PARAMETERS> ::= <ID-WITH-TYPE>
-                        | <ID-WITH-TYPE> "," <FORMAL-PARAMETERS>
+  // Changed formal parameters by left factoring to extract "FORMAL-PARAMETERS-REST"
+  <FORMAL-PARAMETERS> ::= <ID-WITH-TYPE> <FORMAL-PARAMETERS-REST>
+
+  <FORMAL-PARAMETERS-REST> ::= "," <FORMAL-PARAMETERS>
+                             | ε
 
        <ID-WITH-TYPE> ::= <IDENTIFIER> ":" <TYPE>
 
@@ -22,33 +32,47 @@
 
    <PRINT-EXPRESSION> ::= "print" "(" <EXPR> ")"
 
-         <EXPRESSION> ::= <SIMPLE-EXPRESSION>
-                        | <EXPRESSION> "=" <SIMPLE-EXPRESSION>
-                        | <EXPRESSION> "<" <SIMPLE-EXPRESSION>
+         // Changed expression by first eliminating left recursion, then left factoring out "EXPRESSION-REST"
+         <EXPRESSION> ::= <SIMPLE-EXPRESSION> <EXPRESSION-REST>
+         
+    <EXPRESSION-REST> ::= "=" <EXPRESSION>
+                        | "<" <EXPRESSION>
+                        | ε
 
-  <SIMPLE-EXPRESSION> ::= <TERM>
-                        | <SIMPLE-EXPRESSION> "or" <TERM>
-                        | <SIMPLE-EXPRESSION> "+" <TERM>
-                        | <SIMPLE-EXPRESSION> "-" <TERM>
+  <SIMPLE-EXPRESSION> ::= <TERM> <SIMPLE-EXPRESSION-REST>
 
-               <TERM> ::= <FACTOR>
-                        | <TERM> "*" <FACTOR>
-                        | <TERM> "/" <FACTOR>
-                        | <TERM> "and" <FACTOR>
+    <SIMPLE-EXPRESSION-REST> ::= "or" <SIMPLE-EXPRESSION>
+                               | "+" <SIMPLE-EXPRESSION>
+                               | "-" <SIMPLE-EXPRESSION>
+                               | ε
 
+               // Changed term by rewriting to eliminate left recursion and then left factoring by adding TERM-REST
+               <TERM> ::= <FACTOR> <TERM-REST>
+        
+        <TERM-REST> ::= "*" <FACTOR>
+                      | "/" <FACTOR>
+                      | "and" <FACTOR>
+                      | ε
+
+             // Changed factor to eliminate ambiguity on "IDENTIFIER" token by adding "FACTOR-REST" when IDENTIFIER is encountered
              <FACTOR> ::= <LITERAL>
                         | "not" <FACTOR>
                         | "-" <FACTOR>
-                        | <IDENTIFIER>
-                        | <IDENTIFIER> "(" <ARGUMENT-LIST> ")"
+                        | <IDENTIFIER> <FACTOR-REST> 
                         | "if" <EXPRESSION> "then" <EXPRESSION> "else" <EXPRESSION>
                         | "(" <EXPRESSION> ")"
+                
+        <FACTOR-REST> ::= "(" <ARGUMENT-LIST> ")"
+                        | ε
 
       <ARGUMENT-LIST> ::= ε
                         | <FORMAL-ARGUMENTS>
 
-   <FORMAL-ARGUMENTS> ::= <EXPRESSION>
-                        | <EXPRESSION> "," <FORMAL-ARGUMENTS>
+   // Changed formal arguments to eliminate ambiguity when EXPRESSION is encountered by adding FORMAL-ARGUMENTS-REST
+   <FORMAL-ARGUMENTS> ::= <EXPRESSION> <FORMAL-ARGUMENTS-REST>
+  
+<FORMAL-ARGUMENTS-REST> ::= "," <FORMAL-ARGUMENTS>
+                          | ε
 
             <LITERAL> ::= <INTEGER-LITERAL>
                         | <BOOLEAN-LITERAL>
