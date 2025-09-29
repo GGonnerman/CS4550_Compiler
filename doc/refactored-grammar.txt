@@ -28,9 +28,9 @@
                         | "boolean"
 
                <BODY> ::= <PRINT-EXPRESSION> <BODY>
-                        | <EXPR>
+                        | <EXPRESSION>
 
-   <PRINT-EXPRESSION> ::= "print" "(" <EXPR> ")"
+   <PRINT-EXPRESSION> ::= "print" "(" <EXPRESSION> ")"
 
          // Changed expression by first eliminating left recursion, then left factoring out "EXPRESSION-REST"
          <EXPRESSION> ::= <SIMPLE-EXPRESSION> <EXPRESSION-REST>

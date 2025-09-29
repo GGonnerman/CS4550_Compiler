@@ -23,27 +23,27 @@
 | FORMAL-ARGUMENTS-REST  | ",", ε                                                                      |
 | LITERAL                | INTEGER-LITERAL, BOOLEAN-LITERAL                                            |
 
-|                        | follow                                                                                                    |
-| ---------------------- | --------------------------------------------------------------------------------------------------------- |
-| PROGRAM                | $                                                                                                         |
-| DEFINITION-LIST        | $                                                                                                         |
-| DEFINITION             | "function", $                                                                                             |
-| PARAMETER-LIST         | ")"                                                                                                       |
-| FORMAL-PARAMETERS      | ")"                                                                                                       |
-| FORMAL-PARAMETERS-REST | ")"                                                                                                       |
-| ID-WITH-TYPE           | ",", ")"                                                                                                  |
-| TYPE                   | INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", <IDENTIFIER>, "if", "(", follow(id-with-type)               |
-| BODY                   | "function", $, follow(body)                                                                               |
-| PRINT-EXPRESSION       | INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", <IDENTIFIER>, "if", "("                                     |
-| EXPRESSION             | follow(body), ")", follow(expression-rest), "then", "else", follow(factor), ",", follow(formal-arguments) |
-| EXPRESSION-REST        | follow(expression)                                                                                        |
-| SIMPLE-EXPRESSION      | "=", "<", follow(expression), follow(simple-expresion-rest)                                               |
-| SIMPLE-EXPRESSION-REST | follow(simple-expression)                                                                                 |
-| TERM                   | "or", "+", "-", follow(simple-expression)                                                                 |
-| TERM-REST              | follow(term)                                                                                              |
-| FACTOR                 | "\*", "/", "and", follow(term), follow(term-rest), follow(factor)                                         |
-| FACTOR-REST            | follow(factor)                                                                                            |
-| ARGUMENT-LIST          | ")"                                                                                                       |
-| FORMAL-ARGUMENTS       | follow(argument-list), follow(formal-arguments-rest)                                                      |
-| FORMAL-ARGUMENTS-REST  | follow(formal-arguments)                                                                                  |
-| LITERAL                | follow(factor)                                                                                            |
+|                        | follow                                                                                                                             |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| PROGRAM                | $                                                                                                                                  |
+| DEFINITION-LIST        | follow(PROGRAM)                                                                                                                    |
+| DEFINITION             | first(DEFINITION-LIST), follow(DEFINITION-LIST)                                                                                    |
+| PARAMETER-LIST         | ")"                                                                                                                                |
+| FORMAL-PARAMETERS      | follow(PARAMETER-LIST), follow(FORMAL-PARAMETER-REST)                                                                              |
+| FORMAL-PARAMETERS-REST | follow(FORMAL-PARAMETERS)                                                                                                          |
+| ID-WITH-TYPE           | first(FORMAL-PARAMETERS-REST), follow(FORMAL-PARAMETERS)                                                                           |
+| TYPE                   | first(BODY), follow(ID-WITH-TYPE)                                                                                                  |
+| BODY                   | follow(DEFINITION)                                                                                                                 |
+| PRINT-EXPRESSION       | first(BODY)                                                                                                                        |
+| EXPRESSION             | follow(BODY), ")", follow(EXPRESSION-REST), "then", "else", follow(FACTOR), first(FORMAL-ARGUMENTS-REST), follow(FORMAL-ARGUMENTS) |
+| EXPRESSION-REST        | follow(EXPRESSION)                                                                                                                 |
+| SIMPLE-EXPRESSION      | first(EXPRERSSION-REST), follow(EXPRESSION), follow(SIMPLE-EXPRESSION-REST)                                                        |
+| SIMPLE-EXPRESSION-REST | follow(SIMPLE-EXPRESSION)                                                                                                          |
+| TERM                   | first(SIMPLE-EXPRERSSION-REST), follow(SIMPLE-EXPRESSION)                                                                          |
+| TERM-REST              | follow(TERM)                                                                                                                       |
+| FACTOR                 | first(TERM-REST), follow(TERM), follow(TERM-REST)                                                                                  |
+| FACTOR-REST            | follow(FACTOR)                                                                                                                     |
+| ARGUMENT-LIST          | ")"                                                                                                                                |
+| FORMAL-ARGUMENTS       | follow(ARGUMENT-LIST), follow(FORMAL-ARGUMENTS-REST)                                                                               |
+| FORMAL-ARGUMENTS-REST  | follow(FORMAL-ARGUMENTS)                                                                                                           |
+| LITERAL                | follow(FACTOR)                                                                                                                     |
