@@ -23,27 +23,27 @@
 | FORMAL-ARGUMENTS-REST  | ",", ε                                                                      |
 | LITERAL                | INTEGER-LITERAL, BOOLEAN-LITERAL                                            |
 
-|                        | follow                                                                                                                                                       |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| PROGRAM                | $                                                                                                                                                            |
-| DEFINITION-LIST        | $                                                                                                                                                            |
-| DEFINITION             | first(DEFINITION-LIST), $                                                                                                                                    |
-| PARAMETER-LIST         | ")"                                                                                                                                                          |
-| FORMAL-PARAMETERS      | ")"                                                                                                                                                          |
-| FORMAL-PARAMETERS-REST | ")"                                                                                                                                                          |
-| ID-WITH-TYPE           | first(FORMAL-PARAMETERS-REST), ")"                                                                                                                           |
-| TYPE                   | first(BODY), follow(ID-WITH-TYPE)                                                                                                                            |
-| BODY                   | first(DEFINITION-LIST), $                                                                                                                                    |
-| PRINT-EXPRESSION       | first(BODY)                                                                                                                                                  |
-| EXPRESSION             | first(DEFINITION-LIST), $, ")", "then", "else", first(TERM-REST), first(SIMPLE-EXPRERSSION-REST), first(EXPRERSSION-REST), first(FORMAL-ARGUMENTS-REST), ")" |
-| EXPRESSION-REST        | first(DEFINITION-LIST), $, ")", "then", "else", first(TERM-REST), first(SIMPLE-EXPRERSSION-REST), first(EXPRERSSION-REST), first(FORMAL-ARGUMENTS-REST), ")" |
-| SIMPLE-EXPRESSION      | first(DEFINITION-LIST), $, ")", "then", "else", first(TERM-REST), first(SIMPLE-EXPRERSSION-REST), first(EXPRERSSION-REST), first(FORMAL-ARGUMENTS-REST), ")" |
-| SIMPLE-EXPRESSION-REST | first(DEFINITION-LIST), $, ")", "then", "else", first(TERM-REST), first(SIMPLE-EXPRERSSION-REST), first(EXPRERSSION-REST), first(FORMAL-ARGUMENTS-REST), ")" |
-| TERM                   | first(DEFINITION-LIST), $, ")", "then", "else", first(TERM-REST), first(SIMPLE-EXPRERSSION-REST), first(EXPRERSSION-REST), first(FORMAL-ARGUMENTS-REST), ")" |
-| TERM-REST              | first(DEFINITION-LIST), $, ")", "then", "else", first(TERM-REST), first(SIMPLE-EXPRERSSION-REST), first(EXPRERSSION-REST), first(FORMAL-ARGUMENTS-REST), ")" |
-| FACTOR                 | first(DEFINITION-LIST), $, ")", "then", "else", first(TERM-REST), first(SIMPLE-EXPRERSSION-REST), first(EXPRERSSION-REST), first(FORMAL-ARGUMENTS-REST), ")" |
-| FACTOR-REST            | first(DEFINITION-LIST), $, ")", "then", "else", first(TERM-REST), first(SIMPLE-EXPRERSSION-REST), first(EXPRERSSION-REST), first(FORMAL-ARGUMENTS-REST), ")" |
-| ARGUMENT-LIST          | ")"                                                                                                                                                          |
-| FORMAL-ARGUMENTS       | ")"                                                                                                                                                          |
-| FORMAL-ARGUMENTS-REST  | ")"                                                                                                                                                          |
-| LITERAL                | first(DEFINITION-LIST), $, ")", "then", "else", first(TERM-REST), first(SIMPLE-EXPRERSSION-REST), first(EXPRERSSION-REST), first(FORMAL-ARGUMENTS-REST), ")" |
+|                        | follow                                                                                   |
+| ---------------------- | ---------------------------------------------------------------------------------------- |
+| PROGRAM                | $                                                                                        |
+| DEFINITION-LIST        | $                                                                                        |
+| DEFINITION             | "function", $                                                                            |
+| PARAMETER-LIST         | ")"                                                                                      |
+| FORMAL-PARAMETERS      | ")"                                                                                      |
+| FORMAL-PARAMETERS-REST | ")"                                                                                      |
+| ID-WITH-TYPE           | ",", ")"                                                                                 |
+| TYPE                   | "print", INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", IDENTIFIER, "if", "(", ",", ")"   |
+| BODY                   | "function", $                                                                            |
+| PRINT-EXPRESSION       | "print", INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", IDENTIFIER, "if", "("             |
+| EXPRESSION             | "function", $, "then", "else", "\*", "/", "and", "or", "+", "-", "=", "<", ",", ")"      |
+| EXPRESSION-REST        | "function", $, "then", "else", "\*", "/", "and", "or", "+", "-", "=", "<", ",", ")"      |
+| SIMPLE-EXPRESSION      | "function", $, "then", "else", "\*", "/", "and", "or", "+", "-", "=", "<", ",", ")"      |
+| SIMPLE-EXPRESSION-REST | "function", $, "then", "else", "\*", "/", "and", "or", "+", "-", "=", "<", ",", ")"      |
+| TERM                   | "function", $, "then", "else", "\*", "/", "and", "or", "+", "-", "=", "<", ",", ")"      |
+| TERM-REST              | "function", $, "then", "else", "\*", "/", "and", "or", "+", "-", "=", "<", ",", ")"      |
+| FACTOR                 | "function", $, "then", "else", "\*", "/", "and", "or", "+", "-", "=", "<", ",", ")"      |
+| FACTOR-REST            | "function", $, "then", "else", "\*", "/", "and", "or", "+", "-", "=", "<", ",", ")"      |
+| ARGUMENT-LIST          | ")"                                                                                      |
+| FORMAL-ARGUMENTS       | ")"                                                                                      |
+| FORMAL-ARGUMENTS-REST  | ")"                                                                                      |
+| LITERAL                | "function", $, ")", "then", "else", "\*", "/", "and", "or", "+", "-", "=", "<", ",", ")" |
