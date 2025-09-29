@@ -1,6 +1,7 @@
 from typing_extensions import override
 
 from compiler.position import Position
+from compiler.util import insert_newlines
 
 
 class KleinError(Exception):
@@ -20,4 +21,6 @@ class LexicalError(KleinError):
 
     @override
     def __str__(self) -> str:
-        return f"Klein Lexical Error at {self._position}: {self._message}"
+        return insert_newlines(
+            f"Klein Lexical Error at {self._position}: {self._message}",
+        )
