@@ -1,27 +1,27 @@
-|                        | first                                                                  |
-| ---------------------- | ---------------------------------------------------------------------- |
-| PROGRAM                | "function", ε                                                          |
-| DEFINITION-LIST        | "function", ε                                                          |
-| DEFINITION             | "function"                                                             |
-| PARAMETER-LIST         | ε, ","                                                                 |
-| FORMAL-PARAMETERS      | IDENTIFIER                                                             |
-| FORMAL-PARAMETERS-REST | "," ε                                                                  |
-| ID-WITH-TYPE           | IDENTIFIER                                                             |
-| TYPE                   | "integer", "boolean"                                                   |
-| BODY                   | INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", IDENTIFIER, "if", "("    |
-| PRINT-EXPRESSION       | "print"                                                                |
-| EXPRESSION             | INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", IDENTIFIER, "if", "("    |
-| EXPRESSION-REST        | "=", "", ε                                                             |
-| SIMPLE-EXPRESSION      | INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", IDENTIFIER, "if", "("    |
-| SIMPLE-EXPRESSION-REST | "or", "+", "-", ε                                                      |
-| TERM                   | INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", IDENTIFIER, "if", "("    |
-| TERM-REST              | "\*", "/", "and", ε                                                    |
-| FACTOR                 | INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", IDENTIFIER, "if", "("    |
-| FACTOR-REST            | "(", ε                                                                 |
-| ARGUMENT-LIST          | ε, INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", IDENTIFIER, "if", "(" |
-| FORMAL-ARGUMENTS       | INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", IDENTIFIER, "if", "("    |
-| FORMAL-ARGUMENTS-REST  | ",", ε                                                                 |
-| LITERAL                | INTEGER-LITERAL, BOOLEAN-LITERAL                                       |
+|                        | first                                                                       |
+| ---------------------- | --------------------------------------------------------------------------- |
+| PROGRAM                | "function", ε                                                               |
+| DEFINITION-LIST        | "function", ε                                                               |
+| DEFINITION             | "function"                                                                  |
+| PARAMETER-LIST         | ε, IDENTIFIER                                                               |
+| FORMAL-PARAMETERS      | IDENTIFIER                                                                  |
+| FORMAL-PARAMETERS-REST | "," ε                                                                       |
+| ID-WITH-TYPE           | IDENTIFIER                                                                  |
+| TYPE                   | "integer", "boolean"                                                        |
+| BODY                   | "print" INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", IDENTIFIER, "if", "(" |
+| PRINT-EXPRESSION       | "print"                                                                     |
+| EXPRESSION             | INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", IDENTIFIER, "if", "("         |
+| EXPRESSION-REST        | "=", "<", ε                                                                 |
+| SIMPLE-EXPRESSION      | INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", IDENTIFIER, "if", "("         |
+| SIMPLE-EXPRESSION-REST | "or", "+", "-", ε                                                           |
+| TERM                   | INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", IDENTIFIER, "if", "("         |
+| TERM-REST              | "\*", "/", "and", ε                                                         |
+| FACTOR                 | INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", IDENTIFIER, "if", "("         |
+| FACTOR-REST            | "(", ε                                                                      |
+| ARGUMENT-LIST          | ε, INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", IDENTIFIER, "if", "("      |
+| FORMAL-ARGUMENTS       | INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", IDENTIFIER, "if", "("         |
+| FORMAL-ARGUMENTS-REST  | ",", ε                                                                      |
+| LITERAL                | INTEGER-LITERAL, BOOLEAN-LITERAL                                            |
 
 |                        | follow                                                                                                    |
 | ---------------------- | --------------------------------------------------------------------------------------------------------- |
