@@ -7,10 +7,19 @@ from compiler.position import Position
 
 class TokenType(IntEnum):
     INTEGER = auto()
+    KEYWORD_INTEGER = auto()
+    KEYWORD_BOOLEAN = auto()
+    KEYWORD_IF = auto()
+    KEYWORD_THEN = auto()
+    KEYWORD_ELSE = auto()
+    KEYWORD_NOT = auto()
+    KEYWORD_AND = auto()
+    KEYWORD_OR = auto()
+    KEYWORD_FUNCTION = auto()
+    KEYWORD_PRINT = auto()
+    KEYWORD_TRUE = auto()
+    KEYWORD_FALSE = auto()
     IDENTIFIER = auto()
-    KEYWORD = auto()
-    BOOLEAN = auto()
-    PRIMITIVE_IDENTIFIER = auto()
     LEFT_PAREN = auto()
     RIGHT_PAREN = auto()
     COMMA = auto()
@@ -35,34 +44,6 @@ class Token:
         self.token_type: TokenType = token_type
         self.token_value: str | None = token_value
 
-    def is_a(self, token_type: TokenType) -> bool:
-        return self.token_type == token_type
-
-    def is_keyword(self):
-        return self.token_type in [
-            TokenType.KEYWORD,
-            TokenType.BOOLEAN,
-            TokenType.PRIMITIVE_IDENTIFIER,
-        ]
-
-    def is_punctuation(self):
-        return self.token_type in [
-            TokenType.LEFT_PAREN,
-            TokenType.RIGHT_PAREN,
-            TokenType.COMMA,
-            TokenType.COLON,
-        ]
-
-    def is_operator(self):
-        return self.token_type in [
-            TokenType.PLUS,
-            TokenType.MINUS,
-            TokenType.TIMES,
-            TokenType.DIVIDE,
-            TokenType.LESS_THAN,
-            TokenType.EQUAL,
-        ]
-
     def value(self):
         return self.token_value
 
@@ -77,9 +58,12 @@ class Token:
 
     @override
     def __eq__(self, other: object):
-        if not isinstance(other, Token):
-            return False
-        return (
-            self.token_type == other.token_type
-            and self.token_value == other.token_value
-        )
+        if isinstance(other, TokenType):
+            return self.token_type == other
+        if isinstance(other, Token):
+            return (
+                self.token_type == other.token_type
+                and self.token_value == other.token_value
+                and self.position == other.position
+            )
+        raise ValueError("Tokens can only be compared with other tokens or TokenTypes")

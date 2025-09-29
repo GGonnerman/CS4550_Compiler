@@ -10,19 +10,20 @@ PUNCTUATION = "(),:"
 OPERATORS = "+-*/<="
 SKIPPABLE = "\t\n\r ("
 DELIMITERS = PUNCTUATION + OPERATORS + SKIPPABLE
-KEYWORDS = [
-    "integer",
-    "boolean",
-    "if",
-    "then",
-    "else",
-    "not",
-    "and",
-    "or",
-    "function",
-]
-PRIMATIVE_IDENTIFIERS = ["print"]
-BOOLEAN_LITERALS = ["true", "false"]
+KEYWORDS: dict[str, TokenType] = {
+    "integer": TokenType.KEYWORD_INTEGER,
+    "boolean": TokenType.KEYWORD_BOOLEAN,
+    "if": TokenType.KEYWORD_IF,
+    "then": TokenType.KEYWORD_THEN,
+    "else": TokenType.KEYWORD_ELSE,
+    "not": TokenType.KEYWORD_NOT,
+    "and": TokenType.KEYWORD_AND,
+    "or": TokenType.KEYWORD_OR,
+    "function": TokenType.KEYWORD_FUNCTION,
+    "print": TokenType.KEYWORD_PRINT,
+    "true": TokenType.KEYWORD_TRUE,
+    "false": TokenType.KEYWORD_FALSE,
+}
 
 
 class Scanner:
@@ -54,7 +55,7 @@ class Scanner:
 
         if update_position:
             self.position.load(self.working_position)
-            self.has_terminated = token.is_a(TokenType.END_OF_FILE)
+            self.has_terminated = token == TokenType.END_OF_FILE
         else:
             self.working_position.load(self.position)
 
@@ -105,16 +106,9 @@ class Scanner:
                 "Identifiers cannot be longer than 256 characters",
                 self.working_position,
             )
-        if identifier in BOOLEAN_LITERALS:
-            return Token(self.position.copy(), TokenType.BOOLEAN, self.accum)
-        if identifier in PRIMATIVE_IDENTIFIERS:
-            return Token(
-                self.position.copy(),
-                TokenType.PRIMITIVE_IDENTIFIER,
-                self.accum,
-            )
         if identifier in KEYWORDS:
-            return Token(self.position.copy(), TokenType.KEYWORD, self.accum)
+            token_type = KEYWORDS[identifier]
+            return Token(self.position.copy(), token_type)
         return Token(self.position.copy(), TokenType.IDENTIFIER, self.accum)
 
     def _stage1(self) -> Token:
