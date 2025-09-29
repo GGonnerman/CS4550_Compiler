@@ -14,7 +14,7 @@ Produced by the **Compile Squad**
 - `src/compiler`: The home for all of the python source code
 - `scanner.py`: Scans through the program and seperates each character of string of characters into tokens
 - `position.py`: Custom position class to track the location in the program
-- `token_agl.py`: Custom token class with a number of TokenTypes
+- `token.py`: Custom token class with a number of TokenTypes
 - `token_lister.py`: Takes in a program and prints its token in an easily readable format
 - `klein_errors.py`: Custom errors classes related to different stages of compiling
 - `__init__.py`: These files are empty, but are required through to let python know that the current folder is a module.

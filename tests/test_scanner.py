@@ -1,14 +1,15 @@
 import pytest
 
 from compiler.klein_errors import KleinError, LexicalError
+from compiler.position import Position
 from compiler.scanner import Scanner
-from compiler.token_agl import Token, TokenType
+from compiler.token import Token, TokenType
 
 
 def test_scan_end_of_file():
     s = Scanner("")
     assert s.has_next(), "Empty file should have next input (EOF char)"
-    assert s.next().is_a(TokenType.END_OF_FILE), (
+    assert s.next() == TokenType.END_OF_FILE, (
         "An empty file should only contain the end of file token"
     )
 
@@ -41,25 +42,29 @@ def test_unknown_character():
         _ = s.next()
     assert (
         str(excinfo.value)
-        == 'Klein Lexical Error at Line 0 Position 0: Illegal character "_" when looking for next token.'
+        == 'Klein Lexical Error at Line 0 Position 0: Illegal character "_" when looking for\nnext token.'
     )
     s = Scanner("@hi")
     with pytest.raises(LexicalError) as excinfo:
         _ = s.next()
     assert (
         str(excinfo.value)
-        == 'Klein Lexical Error at Line 0 Position 0: Illegal character "@" when looking for next token.'
+        == 'Klein Lexical Error at Line 0 Position 0: Illegal character "@" when looking for\nnext token.'
     )
 
 
 def test_scan_basic_identifiers():
     s = Scanner("abc aBC a_BC a0b a0_1Bb adsf89__09123d____")
-    assert s.next() == Token(TokenType.IDENTIFIER, "abc")
-    assert s.next() == Token(TokenType.IDENTIFIER, "aBC")
-    assert s.next() == Token(TokenType.IDENTIFIER, "a_BC")
-    assert s.next() == Token(TokenType.IDENTIFIER, "a0b")
-    assert s.next() == Token(TokenType.IDENTIFIER, "a0_1Bb")
-    assert s.next() == Token(TokenType.IDENTIFIER, "adsf89__09123d____")
+    assert s.next() == Token(Position(0, 0, 0), TokenType.IDENTIFIER, "abc")
+    assert s.next() == Token(Position(0, 4, 4), TokenType.IDENTIFIER, "aBC")
+    assert s.next() == Token(Position(0, 8, 8), TokenType.IDENTIFIER, "a_BC")
+    assert s.next() == Token(Position(0, 13, 13), TokenType.IDENTIFIER, "a0b")
+    assert s.next() == Token(Position(0, 17, 17), TokenType.IDENTIFIER, "a0_1Bb")
+    assert s.next() == Token(
+        Position(0, 24, 24),
+        TokenType.IDENTIFIER,
+        "adsf89__09123d____",
+    )
 
 
 def test_raises_on_invalid_identifiers():
@@ -68,7 +73,7 @@ def test_raises_on_invalid_identifiers():
         _ = s.next()
     assert (
         str(excinfo.value)
-        == 'Klein Lexical Error at Line 0 Position 2: Invalid character "@" in identifier. Only alphanumeric characters and underscores allowed.'
+        == 'Klein Lexical Error at Line 0 Position 2: Invalid character "@" in identifier.\nOnly alphanumeric characters and underscores allowed.'
     )
 
     s = Scanner("ab" + chr(11))
@@ -76,7 +81,7 @@ def test_raises_on_invalid_identifiers():
         _ = s.next()
     assert (
         str(excinfo.value)
-        == 'Klein Lexical Error at Line 0 Position 2: Invalid character "utf8:11" in identifier. Only alphanumeric characters and underscores allowed.'
+        == 'Klein Lexical Error at Line 0 Position 2: Invalid character "utf8:11" in\nidentifier. Only alphanumeric characters and underscores allowed.'
     )
 
 
@@ -85,7 +90,7 @@ def test_max_identifier_boundary():
     s = Scanner(
         ident_256,
     )
-    assert s.next() == Token(TokenType.IDENTIFIER, ident_256)
+    assert s.next() == Token(Position(0, 0, 0), TokenType.IDENTIFIER, ident_256)
 
     ident_257 = ident_256 + "g"
 
@@ -96,16 +101,16 @@ def test_max_identifier_boundary():
         _ = s.next()
     assert (
         str(excinfo.value)
-        == "Klein Lexical Error at Line 0 Position 257: Identifiers cannot be longer than 256 characters"
+        == "Klein Lexical Error at Line 0 Position 257: Identifiers cannot be longer than\n256 characters"
     )
 
 
 def test_scan_basic_ints():
     s = Scanner("0 123 1234567 1000")
-    assert s.next() == Token(TokenType.INTEGER, "0")
-    assert s.next() == Token(TokenType.INTEGER, "123")
-    assert s.next() == Token(TokenType.INTEGER, "1234567")
-    assert s.next() == Token(TokenType.INTEGER, "1000")
+    assert s.next() == Token(Position(0, 0, 0), TokenType.INTEGER, "0")
+    assert s.next() == Token(Position(0, 2, 2), TokenType.INTEGER, "123")
+    assert s.next() == Token(Position(0, 6, 6), TokenType.INTEGER, "1234567")
+    assert s.next() == Token(Position(0, 14, 14), TokenType.INTEGER, "1000")
 
 
 def test_raises_on_invalid_ints():
@@ -136,87 +141,95 @@ def test_raises_on_invalid_ints():
 
 def test_integer_bounds():
     s = Scanner("0")
-    assert s.next() == Token(TokenType.INTEGER, "0")
+    assert s.next() == Token(Position(0, 0, 0), TokenType.INTEGER, "0")
     int_limit = (2**31) - 1
     s = Scanner(str(int_limit))
-    assert s.next() == Token(TokenType.INTEGER, str(int_limit))
+    assert s.next() == Token(Position(0, 0, 0), TokenType.INTEGER, str(int_limit))
     overflow = int_limit + 1
     s = Scanner(str(overflow))
     with pytest.raises(LexicalError) as excinfo:
         _ = s.next()
     assert (
         str(excinfo.value)
-        == "Klein Lexical Error at Line 0 Position 10: Integer literal must be bounded between 0 (incl) and 2147483647 (incl)."
+        == "Klein Lexical Error at Line 0 Position 10: Integer literal must be bounded\nbetween 0 (incl) and 2147483647 (incl)."
     )
     s = Scanner(str(overflow) + ")")
     with pytest.raises(LexicalError) as excinfo:
         _ = s.next()
     assert (
         str(excinfo.value)
-        == "Klein Lexical Error at Line 0 Position 10: Integer literal must be bounded between 0 (incl) and 2147483647 (incl)."
+        == "Klein Lexical Error at Line 0 Position 10: Integer literal must be bounded\nbetween 0 (incl) and 2147483647 (incl)."
     )
 
 
-def test_detects_special_identifiers():
+def test_detects_keywords():
     s = Scanner("integer boolean true false if then else not and or function print")
-    assert s.next() == Token(TokenType.KEYWORD, "integer")
-    assert s.next() == Token(TokenType.KEYWORD, "boolean")
-    assert s.next() == Token(TokenType.BOOLEAN, "true"), (
+    assert s.next() == Token(Position(0, 0, 0), TokenType.KEYWORD_INTEGER)
+    assert s.next() == Token(Position(0, 8, 8), TokenType.KEYWORD_BOOLEAN)
+    assert s.next() == Token(Position(0, 16, 16), TokenType.KEYWORD_TRUE), (
         "Should use correct token class for true boolean"
     )
-    assert s.next() == Token(TokenType.BOOLEAN, "false"), (
+    assert s.next() == Token(Position(0, 21, 21), TokenType.KEYWORD_FALSE), (
         "Should use correct token class for false boolean"
     )
-    assert s.next() == Token(TokenType.KEYWORD, "if")
-    assert s.next() == Token(TokenType.KEYWORD, "then")
-    assert s.next() == Token(TokenType.KEYWORD, "else")
-    assert s.next() == Token(TokenType.KEYWORD, "not")
-    assert s.next() == Token(TokenType.KEYWORD, "and")
-    assert s.next() == Token(TokenType.KEYWORD, "or")
-    assert s.next() == Token(TokenType.KEYWORD, "function")
-    assert s.next() == Token(TokenType.PRIMITIVE_IDENTIFIER, "print")
+    assert s.next() == Token(Position(0, 27, 27), TokenType.KEYWORD_IF)
+    assert s.next() == Token(Position(0, 30, 30), TokenType.KEYWORD_THEN)
+    assert s.next() == Token(Position(0, 35, 35), TokenType.KEYWORD_ELSE)
+    assert s.next() == Token(Position(0, 40, 40), TokenType.KEYWORD_NOT)
+    assert s.next() == Token(Position(0, 44, 44), TokenType.KEYWORD_AND)
+    assert s.next() == Token(Position(0, 48, 48), TokenType.KEYWORD_OR)
+    assert s.next() == Token(Position(0, 51, 51), TokenType.KEYWORD_FUNCTION)
+    assert s.next() == Token(Position(0, 60, 60), TokenType.KEYWORD_PRINT)
 
 
 def test_detects_operators():
     s = Scanner("+ - / * < =")
-    assert s.next() == Token(TokenType.PLUS)
-    assert s.next() == Token(TokenType.MINUS)
-    assert s.next() == Token(TokenType.DIVIDE)
-    assert s.next() == Token(TokenType.TIMES)
-    assert s.next() == Token(TokenType.LESS_THAN)
-    assert s.next() == Token(TokenType.EQUAL)
+    assert s.next() == TokenType.PLUS
+    assert s.next() == TokenType.MINUS
+    assert s.next() == TokenType.DIVIDE
+    assert s.next() == TokenType.TIMES
+    assert s.next() == TokenType.LESS_THAN
+    assert s.next() == TokenType.EQUAL
 
 
 def test_detects_punctuation():
     s = Scanner("( ) , : (")
-    assert s.next() == Token(TokenType.LEFT_PAREN)
-    assert s.next() == Token(TokenType.RIGHT_PAREN)
-    assert s.next() == Token(TokenType.COMMA)
-    assert s.next() == Token(TokenType.COLON)
-    assert s.next() == Token(TokenType.LEFT_PAREN)
+    assert s.next() == TokenType.LEFT_PAREN
+    assert s.next() == TokenType.RIGHT_PAREN
+    assert s.next() == TokenType.COMMA
+    assert s.next() == TokenType.COLON
+    assert s.next() == TokenType.LEFT_PAREN
 
 
 def test_whitespace_ignored():
     s = Scanner(" a\tb\nc\rd")
-    assert s.next() == Token(TokenType.IDENTIFIER, "a"), "Ignores a space"
-    assert s.next() == Token(TokenType.IDENTIFIER, "b"), "Ignores a tab"
-    assert s.next() == Token(TokenType.IDENTIFIER, "c"), "Ignores a newline"
-    assert s.next() == Token(TokenType.IDENTIFIER, "d"), "Ignores a carriage return"
+    assert s.next() == Token(Position(0, 1, 1), TokenType.IDENTIFIER, "a"), (
+        "Ignores a space"
+    )
+    assert s.next() == Token(Position(0, 3, 3), TokenType.IDENTIFIER, "b"), (
+        "Ignores a tab"
+    )
+    assert s.next() == Token(Position(1, 0, 5), TokenType.IDENTIFIER, "c"), (
+        "Ignores a newline"
+    )
+    assert s.next() == Token(Position(1, 2, 7), TokenType.IDENTIFIER, "d"), (
+        "Ignores a carriage return"
+    )
 
 
 def test_comments_ignored():
     s = Scanner(
         "(* this is a long\t\n\rmultiine comment that 012 contains in&!@^#valid identifiers * ) (* and more *)",
     )
-    assert s.next() == Token(TokenType.END_OF_FILE)
+    assert s.next() == Token(Position(1, 79, 98), TokenType.END_OF_FILE)
     s = Scanner(
         "(**)",
     )
-    assert s.next() == Token(TokenType.END_OF_FILE)
+    assert s.next() == Token(Position(0, 4, 4), TokenType.END_OF_FILE)
     s = Scanner(
         "(* *)",
     )
-    assert s.next() == Token(TokenType.END_OF_FILE)
+    assert s.next() == Token(Position(0, 5, 5), TokenType.END_OF_FILE)
 
 
 def test_trailing_comment_raises():
@@ -225,23 +238,24 @@ def test_trailing_comment_raises():
         _ = s.next()
     assert (
         str(excinfo.value)
-        == "Klein Lexical Error at Line 0 Position 7: All comments must be terminated before program ends"
+        == "Klein Lexical Error at Line 0 Position 7: All comments must be terminated before\nprogram ends"
     )
     s = Scanner("(* test*")
     with pytest.raises(LexicalError) as excinfo:
         _ = s.next()
     assert (
         str(excinfo.value)
-        == "Klein Lexical Error at Line 0 Position 8: All comments must be terminated before program ends"
+        == "Klein Lexical Error at Line 0 Position 8: All comments must be terminated before\nprogram ends"
     )
 
 
 def test_position_tracks():
-    s = Scanner("hey\nhi\n  \r once")
+    s = Scanner("hey\nhi\n1223  function \r once")
     for _ in s:
         pass
-    assert s.position.get_position() == 8
-    assert s.position.get_absolute_position() == 15
+
+    assert s.position.get_position() == 21
+    assert s.position.get_absolute_position() == 28
     assert s.position.get_line_number() == 2
 
 
@@ -273,17 +287,17 @@ def test_delimiters_function():
         TokenType.DIVIDE,
     ]
     for delimiter_type in delimiter_types:
-        assert s.next() == Token(TokenType.IDENTIFIER, "abc")
-        assert s.next() == Token(delimiter_type)
+        assert s.next() == TokenType.IDENTIFIER
+        assert s.next() == delimiter_type
 
 
 def test_scanner_iter():
     s = Scanner("abc\nabc\rabc")
     tokens = [
-        Token(TokenType.IDENTIFIER, "abc"),
-        Token(TokenType.IDENTIFIER, "abc"),
-        Token(TokenType.IDENTIFIER, "abc"),
-        Token(TokenType.END_OF_FILE),
+        Token(Position(0, 0, 0), TokenType.IDENTIFIER, "abc"),
+        Token(Position(1, 0, 4), TokenType.IDENTIFIER, "abc"),
+        Token(Position(1, 4, 8), TokenType.IDENTIFIER, "abc"),
+        Token(Position(1, 7, 11), TokenType.END_OF_FILE),
     ]
     for token in s:
         assert token == tokens[0]

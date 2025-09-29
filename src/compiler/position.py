@@ -14,6 +14,13 @@ class Position(SupportsIndex):
         self._position: int = position
         self._absolute_position: int = absolute_position
 
+    def copy(self):
+        return Position(
+            self._line_number,
+            self._position,
+            self._absolute_position,
+        )
+
     def load(self, position: "Position"):
         self._line_number = position.get_line_number()
         self._position = position.get_position()
@@ -32,7 +39,15 @@ class Position(SupportsIndex):
 
     @override
     def __eq__(self, other: object):
-        return self._absolute_position == other
+        if isinstance(other, Position):
+            return (
+                self._absolute_position == other.get_absolute_position()
+                and self._line_number == other.get_line_number()
+                and self._position == other.get_position()
+            )
+        if isinstance(other, int):
+            return self._absolute_position == other
+        raise ValueError("Positions can only be compared with other positions or ints")
 
     def __ge__(self, other: int):
         return self._absolute_position >= other
