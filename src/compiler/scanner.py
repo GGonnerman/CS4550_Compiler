@@ -21,9 +21,8 @@ KEYWORDS: dict[str, TokenType] = {
     "or": TokenType.KEYWORD_OR,
     "function": TokenType.KEYWORD_FUNCTION,
     "print": TokenType.KEYWORD_PRINT,
-    "true": TokenType.KEYWORD_TRUE,
-    "false": TokenType.KEYWORD_FALSE,
 }
+BOOLEANS: set[str] = {"true", "false"}
 
 
 class Scanner:
@@ -109,6 +108,8 @@ class Scanner:
         if identifier in KEYWORDS:
             token_type = KEYWORDS[identifier]
             return Token(self.position.copy(), token_type)
+        if identifier in BOOLEANS:
+            return Token(self.position.copy(), TokenType.BOOLEAN, self.accum)
         return Token(self.position.copy(), TokenType.IDENTIFIER, self.accum)
 
     def _stage1(self) -> Token:
