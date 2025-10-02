@@ -1,0 +1,5 @@
+(* This doesn't work because print needs to come at the begginning of a function *)
+function main(a : integer, b : integer, n : integer) : integer
+    if n = 0
+       then a
+       else print((10 * a) / b)

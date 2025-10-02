@@ -1,0 +1,4 @@
+(* This progrom doesn't work because there is no type for the parameter height *)
+function main(height): integer
+    print(height)
+    height
