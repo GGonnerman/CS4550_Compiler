@@ -3,7 +3,7 @@ import pytest
 from compiler.klein_errors import KleinError, LexicalError
 from compiler.position import Position
 from compiler.scanner import Scanner
-from compiler.token import Token, TokenType
+from compiler.tokens import Token, TokenType
 
 
 def test_scan_end_of_file():
