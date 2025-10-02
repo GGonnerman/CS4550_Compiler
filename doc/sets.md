@@ -23,27 +23,27 @@
 | FORMAL-ARGUMENTS-REST  | ",", ε                                                                      |
 | LITERAL                | INTEGER-LITERAL, BOOLEAN-LITERAL                                            |
 
-|                        | follow                                                                                   |
-| ---------------------- | ---------------------------------------------------------------------------------------- |
-| PROGRAM                | $                                                                                        |
-| DEFINITION-LIST        | $                                                                                        |
-| DEFINITION             | "function", $                                                                            |
-| PARAMETER-LIST         | ")"                                                                                      |
-| FORMAL-PARAMETERS      | ")"                                                                                      |
-| FORMAL-PARAMETERS-REST | ")"                                                                                      |
-| ID-WITH-TYPE           | ",", ")"                                                                                 |
-| TYPE                   | "print", INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", IDENTIFIER, "if", "(", ",", ")"   |
-| BODY                   | "function", $                                                                            |
-| PRINT-EXPRESSION       | "print", INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", IDENTIFIER, "if", "("             |
-| EXPRESSION             | "function", $, "then", "else", "\*", "/", "and", "or", "+", "-", "=", "<", ",", ")"      |
-| EXPRESSION-REST        | "function", $, "then", "else", "\*", "/", "and", "or", "+", "-", "=", "<", ",", ")"      |
-| SIMPLE-EXPRESSION      | "function", $, "then", "else", "\*", "/", "and", "or", "+", "-", "=", "<", ",", ")"      |
-| SIMPLE-EXPRESSION-REST | "function", $, "then", "else", "\*", "/", "and", "or", "+", "-", "=", "<", ",", ")"      |
-| TERM                   | "function", $, "then", "else", "\*", "/", "and", "or", "+", "-", "=", "<", ",", ")"      |
-| TERM-REST              | "function", $, "then", "else", "\*", "/", "and", "or", "+", "-", "=", "<", ",", ")"      |
-| FACTOR                 | "function", $, "then", "else", "\*", "/", "and", "or", "+", "-", "=", "<", ",", ")"      |
-| FACTOR-REST            | "function", $, "then", "else", "\*", "/", "and", "or", "+", "-", "=", "<", ",", ")"      |
-| ARGUMENT-LIST          | ")"                                                                                      |
-| FORMAL-ARGUMENTS       | ")"                                                                                      |
-| FORMAL-ARGUMENTS-REST  | ")"                                                                                      |
-| LITERAL                | "function", $, ")", "then", "else", "\*", "/", "and", "or", "+", "-", "=", "<", ",", ")" |
+|                        | follow                                                                                 |
+| ---------------------- | -------------------------------------------------------------------------------------- |
+| PROGRAM                | $                                                                                      |
+| DEFINITION-LIST        | $                                                                                      |
+| DEFINITION             | "function", $                                                                          |
+| PARAMETER-LIST         | ")"                                                                                    |
+| FORMAL-PARAMETERS      | ")"                                                                                    |
+| FORMAL-PARAMETERS-REST | ")"                                                                                    |
+| ID-WITH-TYPE           | ",", ")"                                                                               |
+| TYPE                   | "print", INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", IDENTIFIER, "if", "(", ",", ")" |
+| BODY                   | "function", $                                                                          |
+| PRINT-EXPRESSION       | "print", INTEGER-LITERAL, BOOLEAN-LITERAL, "not", "-", IDENTIFIER, "if", "("           |
+| EXPRESSION             | ")", "then", "else", ",", "function", $                                                |
+| EXPRESSION-REST        | ")", "then", "else", ",", "function", $                                                |
+| SIMPLE-EXPRESSION      | "=", "<", ")", "then", "else", ",", "function", $                                      |
+| SIMPLE-EXPRESSION-REST | "=", "<", ")", "then", "else", ",", "function", $                                      |
+| TERM                   | "or", "+", "-", "=", "<", ")", "then", "else", ",", "function", $                      |
+| TERM-REST              | "or", "+", "-", "=", "<", ")", "then", "ellse", ",", "function", $                     |
+| FACTOR                 | "\*", "/", "and", "or", "+", "-", "=", "<", ")", "then", "else", ",", "function", $    |
+| FACTOR-REST            | "\*", "/", "and", "or", "+", "-", "=", "<", ")", "then", "else", ",", "function", $    |
+| ARGUMENT-LIST          | ")"                                                                                    |
+| FORMAL-ARGUMENTS       | ")"                                                                                    |
+| FORMAL-ARGUMENTS-REST  | ")"                                                                                    |
+| LITERAL                | "\*", "/", "and", "or", "+", "-", "=", "<", ")", "then", "else", ",", "function", $    |
