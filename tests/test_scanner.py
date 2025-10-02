@@ -3,7 +3,7 @@ import pytest
 from compiler.klein_errors import KleinError, LexicalError
 from compiler.position import Position
 from compiler.scanner import Scanner
-from compiler.token import Token, TokenType
+from compiler.tokens import Token, TokenType
 
 
 def test_scan_end_of_file():
@@ -166,10 +166,10 @@ def test_detects_keywords():
     s = Scanner("integer boolean true false if then else not and or function print")
     assert s.next() == Token(Position(0, 0, 0), TokenType.KEYWORD_INTEGER)
     assert s.next() == Token(Position(0, 8, 8), TokenType.KEYWORD_BOOLEAN)
-    assert s.next() == Token(Position(0, 16, 16), TokenType.KEYWORD_TRUE), (
+    assert s.next() == Token(Position(0, 16, 16), TokenType.BOOLEAN, "true"), (
         "Should use correct token class for true boolean"
     )
-    assert s.next() == Token(Position(0, 21, 21), TokenType.KEYWORD_FALSE), (
+    assert s.next() == Token(Position(0, 21, 21), TokenType.BOOLEAN, "false"), (
         "Should use correct token class for false boolean"
     )
     assert s.next() == Token(Position(0, 27, 27), TokenType.KEYWORD_IF)
