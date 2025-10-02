@@ -24,3 +24,19 @@ class LexicalError(KleinError):
         return insert_newlines(
             f"Klein Lexical Error at {self._position}: {self._message}",
         )
+
+
+class ParseError(KleinError):
+    def __init__(
+        self,
+        cause: str,
+        *args: object,
+    ) -> None:
+        self._message: str = cause
+        super().__init__(*args)
+
+    @override
+    def __str__(self) -> str:
+        return insert_newlines(
+            f"Invalid Program: {self._message}",
+        )
