@@ -24,10 +24,10 @@ class Parser:
                 next_token = self._scanner.next()
                 _ = stack.pop()
                 if a == next_token.token_type:
-                    print(next_token)
+                    # print(next_token)
                     continue
                 raise ParseError(
-                    f"Was at {a} and got {next_token.token_type}. Erroring",
+                    f"Expected {a} and received {next_token.token_type} on {next_token.position}",
                 )
             # Know we know a is a NonTerminal
             next_token = self._scanner.peek()
@@ -35,7 +35,21 @@ class Parser:
             if key in self._parse_table:
                 rule = self._parse_table[(a, next_token.token_type)]
                 _ = stack.pop()
-                print(f"Saw {key} adding {[n.name for n in (reversed(rule))]}")
+                # print(f"Saw {key} adding {[n.name for n in (reversed(rule))]}")
                 stack.extend(reversed(rule))
             else:
-                raise ParseError(f"Was at couldnt find rule for {key}. Erroring")
+                options: list[str] = []
+                for token_type in TokenType:
+                    if (a, token_type) in self._parse_table:
+                        options.append(token_type.name)  # noqa: PERF401
+                expected_message = ""
+                if len(options) <= 1:
+                    expected_message = f"Expected {options[0]}."
+                else:
+                    expected_message = (
+                        f"Expected one of the following options: {', '.join(options)}."
+                    )
+
+                raise ParseError(
+                    f"Invalid sequence {key[0].name} followed by {key[1].name} on {next_token.position}. {expected_message}",
+                )

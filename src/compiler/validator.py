@@ -15,8 +15,8 @@ def validate_klein_program():
         print("valid program")
     except LexicalError as e:
         print(e)
-    except ParseError:
-        print("Invalid Program")
+    except ParseError as e:
+        print(e)
     except Exception as e:
         print("Unhandled exception")
         print(e)

@@ -6,7 +6,7 @@ from typing_extensions import override
 class Position(SupportsIndex):
     def __init__(
         self,
-        line_number: int = 0,
+        line_number: int = 1,  # Most people start lines numbers at 1
         position: int = 0,
         absolute_position: int = 0,
     ):
