@@ -1,0 +1,42 @@
+(*
+   FILE: sieve.kln
+   AUTHOR: Eugene Wallingford
+   DATE  : 2007/09/25
+   TASK  : computes and prints a Sieve of Eratosthenes
+*)
+
+function main( n : integer ) : boolean
+   sieveAt(2, n)
+
+function sieveAt(current : integer, max : integer) : boolean
+   if max < current then
+      true
+   else
+      doSieveAt(current, max)
+
+(*
+   doSieveAt exists only because calls to print are allowed
+   only as the first expression in the body of function.
+*)
+
+function doSieveAt(current : integer, max : integer) : boolean
+   print( if isPrime(current) then current else 0 )
+   sieveAt(current+1, max)
+
+function isPrime( n : integer ) : boolean
+   not hasDivisorFrom(2, n)
+
+function hasDivisorFrom( i : integer, n : integer) : boolean
+   if i < n then
+      divides(i, n) or hasDivisorFrom(i+1, n)
+   else
+      false
+
+function divides( a : integer, b : integer) : boolean
+   rem(b, a) = 0
+
+function rem( num : integer, den : integer) : integer
+   if num < den then
+      num
+   else
+      rem( num-den, den)

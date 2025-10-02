@@ -1,0 +1,67 @@
+(*
+    integer  :=  digit  |  integer digit
+*)
+
+function emirp(n: integer): boolean
+    isPrime(n) and isPrime(reverse(n))
+
+function snowball(n: integer): boolean
+    isPrime(n) and if (n < 10)
+                      then true
+                      else isPrime(n/10)
+
+(*--------------------------------------*
+ * control functions for main program:  *
+ *    3 for emirp, 5 for snowball       *
+ *    8 for both emirp and snowball     *
+ *--------------------------------------*)
+
+function doBoth(n: integer): boolean
+    print(emirp(n))
+    snowball(n)
+
+function main(n: integer, selector: integer): boolean
+    if selector = 3
+       then emirp(n) 
+       else if selector = 5
+               then snowball(n)
+               else if selector = 8
+                       then doBoth(n)
+                       else false
+
+(*--------------------------------------*
+ * code to compute prime from sieve     *
+ *--------------------------------------*)
+
+function isPrime( n : integer ) : boolean
+   not hasDivisorFrom(2, n)
+
+function hasDivisorFrom( i : integer, n : integer) : boolean
+   if i < n then
+      divides(i, n) or hasDivisorFrom(i+1, n)
+   else
+      false
+
+function divides( a : integer, b : integer) : boolean
+   MOD(b, a) = 0
+
+(*--------------------------------------*
+ * code for reverse from palindrome     *
+ *--------------------------------------*)
+
+function reverse(n : integer) : integer
+  reverseL(n, 0)
+
+function reverseL(n : integer, nR : integer) : integer
+  if n = 0
+     then nR
+     else reverseL(n / 10, 10 * nR + MOD(n, 10))
+
+(*--------------------------------------*
+ * code from Klein library              *
+ *--------------------------------------*)
+
+function MOD( m : integer, n : integer ) : integer
+    m - m/n * n
+
+(*--------------------------------------*)

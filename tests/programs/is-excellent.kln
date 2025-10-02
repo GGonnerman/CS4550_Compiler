@@ -1,0 +1,59 @@
+(* ---------------------------------------------------------------
+
+   This program determines if its command-line argument, a number,
+   is "excellent": when split on half n=ab, b*b - a*a = n.  For
+   example, 48 is excellent, because 8**2 - 4**2 == 48.
+
+   http://programmingpraxis.com/2015/03/24/excellent-numbers/
+
+   --------------------------------------------------------------- *)
+
+(* ----------------------------------------------
+   functions from the Klein library
+   ---------------------------------------------- *)
+
+function MOD(m : integer, n : integer) : integer
+  m - n*(m/n)
+
+function EXP(m : integer, n : integer) : integer
+  if n = 0
+    then 1
+    else m * EXP(m, n-1)
+
+function ODD( n : integer ) : boolean
+  if 0 < n 
+    then (2 * (n/2)) < n
+    else ODD(-n)
+
+(* ----------------------------------------------
+   helper functions
+   ---------------------------------------------- *)
+
+function length(n : integer) : integer
+  if n < 10
+    then 1
+    else 1 + length(n / 10)
+
+function a(n : integer) : integer     (* we could implement this with take *)
+  n / EXP(10, length(n)/2)
+
+function b(n : integer) : integer     (* we could implement this with drop *)
+  MOD(n, EXP(10, length(n)/2))
+
+function excellentDiff(a : integer, b : integer) : integer
+  b*b - a*a
+
+(* ----------------------------------------------
+   primary functions
+   ---------------------------------------------- *)
+
+function isExcellentSwitch(n : integer, length : integer) : boolean
+  if ODD(length)
+    then false
+    else n = excellentDiff(a(n), b(n))
+
+function isExcellent(n : integer) : boolean
+  isExcellentSwitch(n, length(n))
+
+function main(n : integer) : boolean
+  isExcellent(n)
