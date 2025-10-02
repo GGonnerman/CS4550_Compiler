@@ -1,11 +1,11 @@
-from enum import IntEnum, auto
+from enum import StrEnum, auto
 
 from typing_extensions import override
 
 from compiler.position import Position
 
 
-class TokenType(IntEnum):
+class TokenType(StrEnum):
     INTEGER = auto()
     KEYWORD_INTEGER = auto()
     KEYWORD_BOOLEAN = auto()

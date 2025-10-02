@@ -49,9 +49,10 @@
                // Changed term by rewriting to eliminate left recursion and then left factoring by adding TERM-REST
                <TERM> ::= <FACTOR> <TERM-REST>
         
-        <TERM-REST> ::= "*" <FACTOR>
-                      | "/" <FACTOR>
-                      | "and" <FACTOR>
+        // Fixed to be followed by a term here instead of a factor
+        <TERM-REST> ::= "*" <TERM>
+                      | "/" <TERM>
+                      | "and" <TERM>
                       | ε
 
              // Changed factor to eliminate ambiguity on "IDENTIFIER" token by adding "FACTOR-REST" when IDENTIFIER is encountered

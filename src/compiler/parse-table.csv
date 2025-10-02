@@ -4,7 +4,7 @@ definition_list,,,,,,,,,definition definition_list,,,,,,,,,,,,,,,None
 definition,,,,,,,,,keyword_function identifier left_paren parameter_list right_paren colon type body,,,,,,,,,,,,,,,
 parameter_list,,,,,,,,,,,formal_parameters,,,,None,,,,,,,,,
 formal_parameters,,,,,,,,,,,id_with_type formal_parameters_rest,,,,,,,,,,,,,
-formal_parameters_rest,,,,,,,,,,,,,,,None,comma formal_parameters_rest,,,,,,,,
+formal_parameters_rest,,,,,,,,,,,,,,,None,comma formal_parameters,,,,,,,,
 id_with_type,,,,,,,,,,,identifier colon type,,,,,,,,,,,,,
 type,keyword_integer,keyword_boolean,,,,,,,,,,,,,,,,,,,,,,
 body,,,expression,,,expression,,,,print_expression body,expression,expression,expression,expression,,,,,expression,,,,,
@@ -14,7 +14,7 @@ expression_rest,,,,None,None,,,,None,,,,,,None,None,,,,,,less_than expression,eq
 simple_expression,,,term simple_expression_rest,,,term simple_expression_rest,,,,,term simple_expression_rest,term simple_expression_rest,term simple_expression_rest,term simple_expression_rest,,,,,term simple_expression_rest,,,,,
 simple_expression_rest,,,,None,None,,,keyword_or simple_expression,None,,,,,,None,None,,plus simple_expression,minus simple_expression,,,None,None,None
 term,,,factor term_rest,,,factor term_rest,,,,,factor term_rest,factor term_rest,factor term_rest,factor term_rest,,,,,factor term_rest,,,,,
-term_rest,,,,None,None,,and factor,None,None,,,,,,None,None,,None,None,times factor,divide factor,None,None,None
+term_rest,,,,None,None,,keyword_and factor,None,None,,,,,,None,None,,None,None,times term,divide term,None,None,None
 factor,,,keyword_if expression keyword_then expression keyword_else expression,,,keyword_not factor,,,,,identifier factor_rest,literal,literal,left_paren expression right_paren,,,,,minus factor,,,,,
 factor_rest,,,,None,None,,None,None,None,,,,,left_paren argument_list right_paren,None,None,,None,None,None,None,None,None,None
 argument_list,,,formal_arguments,,,formal_arguments,,,,,formal_arguments,formal_arguments,formal_arguments,formal_arguments,None,,,,formal_arguments,,,,,
