@@ -340,6 +340,83 @@ def test_invalid_argument_list():
     )
 
 
+def test_factor():
+    success_case(
+        """
+        function add(): integer
+            1 and 
+            true and
+            not 2 and
+            my_id and
+            my_fun(3, 4) and
+            if true then 5 else 6 and
+            ( 7 * 8 )
+        """,
+        None,
+        "Any valid factor should work",
+    )
+
+
+def test_invalid_factor():
+    error_case(
+        """
+        function add(): integer
+            not integer
+        """,
+        None,
+        "Not followed by non-factor (type) should fail",
+    )
+
+    error_case(
+        """
+        function add(): integer
+            - :
+        """,
+        None,
+        "Minus followed by non-factor (colon) should fail",
+    )
+
+    error_case(
+        """
+        function add(): integer
+            my_id my_id
+        """,
+        None,
+        "Identifieir followed by non-factor rest (another identifier) should fail",
+    )
+
+    error_case(
+        """
+        function add(): integer
+            if true
+                1
+            else
+                2
+        """,
+        None,
+        "If statement missing then should fail",
+    )
+
+    error_case(
+        """
+        function add(): integer
+            if true
+            then 1
+        """,
+        None,
+        "If statement missing else should fail",
+    )
+
+    error_case(
+        """
+        function add(): integer
+            ()
+        """,
+        None,
+        "Factor missing expression inside of parens should fail",
+    )
+
+
 def test_all_programs():
     program_path = Path(__file__).parent / "programs"
     for file in program_path.glob("*.kln"):
