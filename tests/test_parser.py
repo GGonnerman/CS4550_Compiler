@@ -268,6 +268,16 @@ def test_raises_invalid_print():
         "Program should raise on empty print",
     )
 
+    error_case(
+        program="""
+        function test(a : integer): integer
+            1
+            print()
+        """,
+        expected_message=None,
+        error_message="Program should raise on print not being the first part of body",
+    )
+
 
 def test_argument_list():
     success_case(
@@ -492,6 +502,14 @@ def test_simple_expression():
     """,
         None,
         "Adding a negative value should be allowed",
+    )
+    success_case(
+        """
+    function test(): boolean
+        1 < 2 = (3 < 4)
+    """,
+        None,
+        "Nested comparisons should parse",
     )
 
 
