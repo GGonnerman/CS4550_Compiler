@@ -269,6 +269,77 @@ def test_raises_invalid_print():
     )
 
 
+def test_argument_list():
+    success_case(
+        """
+        function add(): integer
+            1
+
+        function main(): integer
+            add()
+        """,
+        None,
+        "Empty argument list should work",
+    )
+
+    success_case(
+        """
+        function add(): integer
+            1
+        function main(): integer
+            add(1)
+        """,
+        None,
+        "Single argument should work",
+    )
+
+    success_case(
+        """
+        function add(): integer
+            1
+        function main(): integer
+            add(1, 2, 3, 4)
+        """,
+        None,
+        "Many arguments should work",
+    )
+
+    success_case(
+        """
+        function add(): integer
+            1
+        function main(): integer
+            add(1 * 2 + 3 and 4, 5 * 6 or 7 and add(1))
+        """,
+        None,
+        "Complex arguments should work",
+    )
+
+
+def test_invalid_argument_list():
+    error_case(
+        """
+        function add(): integer
+            1
+        function main(): integer
+            add(1, )
+        """,
+        None,
+        "Trailing comma in argument list",
+    )
+
+    error_case(
+        """
+        function add(): integer
+            1
+        function main(): integer
+            add(a : integer)
+        """,
+        None,
+        "ID with type in argument list",
+    )
+
+
 def test_all_programs():
     program_path = Path(__file__).parent / "programs"
     for file in program_path.glob("*.kln"):
