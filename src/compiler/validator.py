@@ -17,10 +17,8 @@ def validate_klein_program():
         print(e)
     except ParseError as e:
         print(e)
-    except Exception as e:
-        print("Unhandled exception")
-        print(e)
-        # print("Klein Lexical Error: unable to continue scanning")
+    except Exception:
+        print("Klein Error: unable to continue processing")
 
 
 if __name__ == "__main__":

@@ -31,6 +31,10 @@ class TokenType(StrEnum):
     EQUAL = auto()
     END_OF_FILE = auto()
 
+    @override
+    def __str__(self):
+        return self.name.upper()
+
 
 class Token:
     def __init__(
@@ -46,14 +50,21 @@ class Token:
     def value(self):
         return self.token_value
 
+    #    @override
+    #    def __repr__(self):
+    #        display = self.token_type.name.lower()
+    #        if self.token_value is not None:
+    #            # Just makes sure the tabs all line up nicely
+    #            display += " " * (20 - len(display))
+    #            display += f"\t{self.value()}"
+    #        return display
+
     @override
-    def __repr__(self):
-        display = self.token_type.name.lower()
-        if self.token_value is not None:
-            # Just makes sure the tabs all line up nicely
-            display += " " * (20 - len(display))
-            display += f"\t{self.value()}"
-        return display
+    def __str__(self):
+        out = str(self.token_type)
+        if self.value is not None:
+            out += f":{self.value}"
+        return out
 
     @override
     def __eq__(self, other: object):

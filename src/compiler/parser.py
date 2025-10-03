@@ -21,10 +21,12 @@ class Parser:
         while len(stack) > 0:
             a = stack[-1]
             if isinstance(a, TokenType):
+                # a is a token, so pop the next token and check if it equals a
+                # if so, continue
+                # otherwise, raise a parse error
                 next_token = self._scanner.next()
                 _ = stack.pop()
                 if a == next_token.token_type:
-                    # print(next_token)
                     continue
                 raise ParseError(
                     f"Expected {a} and received {next_token.token_type} on {next_token.position}",
@@ -33,15 +35,18 @@ class Parser:
             next_token = self._scanner.peek()
             key = (a, next_token.token_type)
             if key in self._parse_table:
+                # If we have a rule, add theh tokens/nonterminals onto the stack
+                # in reverse order
                 rule = self._parse_table[(a, next_token.token_type)]
                 _ = stack.pop()
-                # print(f"Saw {key} adding {[n.name for n in (reversed(rule))]}")
                 stack.extend(reversed(rule))
             else:
+                # Otherwise, find all could-be tokens to let the user know what
+                # might have been expected and report those.
                 options: list[str] = []
                 for token_type in TokenType:
                     if (a, token_type) in self._parse_table:
-                        options.append(token_type.name)  # noqa: PERF401
+                        options.append(str(token_type))  # noqa: PERF401
                 expected_message = ""
                 if len(options) <= 1:
                     expected_message = f"Expected {options[0]}."
@@ -51,5 +56,5 @@ class Parser:
                     )
 
                 raise ParseError(
-                    f"Invalid sequence {key[0].name} followed by {key[1].name} on {next_token.position}. {expected_message}",
+                    f"Invalid sequence {key[0]} followed by {key[1]} on {next_token.position}. {expected_message}",
                 )

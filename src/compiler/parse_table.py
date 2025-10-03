@@ -2,6 +2,8 @@ import os
 from enum import StrEnum, auto
 from io import TextIOWrapper
 
+from typing_extensions import override
+
 from compiler.tokens import TokenType
 
 
@@ -28,6 +30,10 @@ class NonTerminal(StrEnum):
     FORMAL_ARGUMENTS = auto()
     FORMAL_ARGUMENTS_REST = auto()
     LITERAL = auto()
+
+    @override
+    def __str__(self):
+        return self.name.upper()
 
 
 def clean_csv_file(csvfile: TextIOWrapper) -> list[list[str]]:

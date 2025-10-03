@@ -83,6 +83,17 @@ def test_raises_invalid_definition():
     )
 
 
+def test_invalid_body():
+    error_case(
+        """
+    function a() integer
+        print(123)
+    """,
+        None,
+        "No return in body",
+    )
+
+
 def test_return_type():
     success_case(
         """
@@ -120,6 +131,15 @@ def test_invalid_return_type():
     """,
         None,
         "Program should raise on integer literal return type",
+    )
+
+    error_case(
+        """
+    function test():
+        1
+    """,
+        None,
+        "Program should raise on no return type",
     )
 
     error_case(
@@ -164,7 +184,7 @@ def test_parameters():
 def test_invalid_parameter():
     error_case(
         """
-    function test(12): integer
+    function test(12 : integer): integer
         1
     """,
         None,
@@ -214,6 +234,16 @@ def test_invalid_parameter():
 
 
 def test_print_expression():
+    success_case(
+        """
+    function test(a : integer): integer
+        print(12)
+        1
+    """,
+        None,
+        "Program should allow print statements",
+    )
+
     success_case(
         """
     function test(a : integer): integer

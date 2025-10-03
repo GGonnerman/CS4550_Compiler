@@ -38,5 +38,5 @@ class ParseError(KleinError):
     @override
     def __str__(self) -> str:
         return insert_newlines(
-            f"Invalid Program: {self._message}",
+            f"Klein Parse Error: {self._message}",
         )
