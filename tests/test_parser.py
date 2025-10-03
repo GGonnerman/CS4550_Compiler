@@ -65,189 +65,208 @@ def test_raises_invalid_definition():
         "No identifier for definition name",
     )
 
-    s = Scanner("""
+    error_case(
+        """
     function a() integer
         1
-    """)
-    p = Parser(s)
-    with pytest.raises(ParseError) as excinfo:
-        p.parse()
-    # No colon inside of definition
+    """,
+        None,
+        "No colon inside of definition",
+    )
 
-    s = Scanner("""
+    error_case(
+        """
     function a() integer
-    """)
-    p = Parser(s)
-    with pytest.raises(ParseError) as excinfo:
-        p.parse()
-    # No body in definition
+    """,
+        None,
+        "No body in definition",
+    )
 
 
 def test_return_type():
-    s = Scanner("""
+    success_case(
+        """
     function test(): integer
         1
-    """)
-    p = Parser(s)
-    assert p.parse() is None, "Program should allow integer return type"
+    """,
+        None,
+        "Program should allow integer return type",
+    )
 
-    s = Scanner("""
+    success_case(
+        """
     function test(): boolean
         1
-    """)
-    p = Parser(s)
-    assert p.parse() is None, "Program should allow boolean return type"
+    """,
+        None,
+        "Program should allow boolean return type",
+    )
 
 
 def test_invalid_return_type():
-    s = Scanner("""
+    error_case(
+        """
     function test(): function
         1
-    """)
-    p = Parser(s)
-    with pytest.raises(ParseError) as excinfo:
-        p.parse()
-    # assert excinfo, "Program should raise on function return type"
+    """,
+        None,
+        "Program should raise on function return type",
+    )
 
-    s = Scanner("""
+    error_case(
+        """
     function test(): 123
         1
-    """)
-    p = Parser(s)
-    with pytest.raises(ParseError) as excinfo:
-        p.parse()
-    # assert excinfo, "Program should raise on integer literal return type"
+    """,
+        None,
+        "Program should raise on integer literal return type",
+    )
 
-    s = Scanner("""
+    error_case(
+        """
     function test(): random_identifier
         1
-    """)
-    p = Parser(s)
-    with pytest.raises(ParseError) as excinfo:
-        p.parse()
-    # assert excinfo, "Program should raise on random identifier as return type"
+    """,
+        None,
+        "Program should raise on random identifier as return type",
+    )
 
 
 def test_parameters():
-    s = Scanner("""
+    success_case(
+        """
     function test(a : integer): integer
         1
-    """)
-    p = Parser(s)
-    assert p.parse() is None, "Program should allow single integer parameters"
+    """,
+        None,
+        "Program should allow single integer parameters",
+    )
 
-    s = Scanner("""
+    success_case(
+        """
     function test(a : boolean): integer
         1
-    """)
-    p = Parser(s)
-    assert p.parse() is None, "Program should allow single boolean parameters"
+    """,
+        None,
+        "Program should allow single boolean parameters",
+    )
 
-    s = Scanner("""
+    success_case(
+        """
     function test(a : integer, b : boolean, c: integer): integer
         1
-    """)
-    p = Parser(s)
-    assert p.parse() is None, "Program should allow multiple parameters"
+    """,
+        None,
+        "Program should allow multiple parameters",
+    )
 
 
 def test_invalid_parameter():
-    s = Scanner("""
+    error_case(
+        """
     function test(12): integer
         1
-    """)
-    p = Parser(s)
-    with pytest.raises(ParseError) as excinfo:
-        p.parse()
-    # assert excinfo, "Program should raise if integer literal given as parameter"
-    s = Scanner("""
+    """,
+        None,
+        "Program should raise if integer literal given as parameter",
+    )
+
+    error_case(
+        """
     function test((): integer
         1
-    """)
-    p = Parser(s)
-    with pytest.raises(ParseError) as excinfo:
-        p.parse()
-    s = Scanner("""
+    """,
+        None,
+        "Program should raise if parameter is start paren",
+    )
+    error_case(
+        """
     function test(a): integer
         1
-    """)
-    p = Parser(s)
-    with pytest.raises(ParseError) as excinfo:
-        p.parse()
-    # assert excinfo, "Program should raise if parameter missing colon and type"
-    s = Scanner("""
+    """,
+        None,
+        "Program should raise if parameter missing colon and type",
+    )
+    error_case(
+        """
     function test(a:): integer
         1
-    """)
-    p = Parser(s)
-    with pytest.raises(ParseError) as excinfo:
-        p.parse()
-    # assert excinfo, "Program should raise if parameter missing type"
-    s = Scanner("""
+    """,
+        None,
+        "Program should raise if parameter missing type",
+    )
+    error_case(
+        """
     function test(a integer): integer
         1
-    """)
-    p = Parser(s)
-    with pytest.raises(ParseError) as excinfo:
-        p.parse()
-    # assert excinfo, "Program should raise if parameter missing colon"
-    s = Scanner("""
+    """,
+        None,
+        "Program should raise if parameter missing colon",
+    )
+    error_case(
+        """
     function test(a : integer, ): integer
         1
-    """)
-    p = Parser(s)
-    with pytest.raises(ParseError) as excinfo:
-        p.parse()
-    # assert excinfo, "Program should raise if trailing comma
+    """,
+        None,
+        "Program should raise if trailing comma",
+    )
 
 
 def test_print_expression():
-    s = Scanner("""
+    success_case(
+        """
     function test(a : integer): integer
         print(12)
         1
-    """)
-    p = Parser(s)
-    assert p.parse() is None, "Program should allow print statements"
+    """,
+        None,
+        "Program should allow print statements",
+    )
 
-    s = Scanner("""
+    success_case(
+        """
     function test(a : integer): integer
         print(1)
         print(2)
         print(3)
         1
-    """)
-    p = Parser(s)
-    assert p.parse() is None, "Program should allow multiple print statements"
+    """,
+        None,
+        "Program should allow multiple print statements",
+    )
 
-    s = Scanner("""
+    success_case(
+        """
     function test(a : integer): integer
         print(not 12 or 3 + 4 * 5)
         1
-    """)
-    p = Parser(s)
-    assert p.parse() is None, "Program should allow complex print statements"
+    """,
+        None,
+        "Program should allow complex print statements",
+    )
 
 
 def test_raises_invalid_print():
-    s = Scanner("""
+    error_case(
+        """
     function test(a : integer): integer
         print(or 12)
         1
-    """)
-    p = Parser(s)
-    with pytest.raises(ParseError) as excinfo:
-        p.parse()
-    # assert excinfo, "Program should riase on invalid body of print
-    s = Scanner("""
-    function test(a : integer): integer
-        print()
-        1
-    """)
-    p = Parser(s)
-    with pytest.raises(ParseError) as excinfo:
-        p.parse()
-    # assert excinfo, "Program should raise on empty print
+    """,
+        None,
+        "Program should riase on invalid body of print",
+    )
+
+    error_case(
+        """
+        function test(a : integer): integer
+            print()
+            1
+        """,
+        None,
+        "Program should raise on empty print",
+    )
 
 
 def test_all_programs():
