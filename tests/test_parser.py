@@ -7,19 +7,125 @@ from compiler.parser import Parser
 from compiler.scanner import Scanner
 
 
-def test_parse_empty_file():
-    s = Scanner("")
+def success_case(program: str, expected_result: str | None, error_message: str):
+    s = Scanner(program)
     p = Parser(s)
-    assert p.parse() is None
+    assert p.parse() == expected_result, error_message
 
 
-def test_minimal():
+def error_case(
+    program: str,
+    expected_message: str | None,
+    error_message: str,
+):
+    s = Scanner(program)
+    p = Parser(s)
+    with pytest.raises(ParseError) as excinfo:
+        p.parse()
+    # assert str(excinfo) == expected_message, error_message
+
+
+def test_parse_empty_file():
+    success_case("", None, "Empty program (no defintions) should parse")
+
+
+def test_parse_definitions():
+    success_case(
+        """
+    function test(): integer
+        1
+    """,
+        None,
+        "Program with single definition should parse",
+    )
+
+    success_case(
+        """
+    function a(): integer
+        1
+    function b(): integer
+        2
+    function c(): integer
+        3
+    function d(): integer
+        4
+    """,
+        None,
+        "Program with many definitions should parse",
+    )
+
+
+def test_raises_invalid_definition():
+    error_case(
+        """
+    function (): integer
+        1
+    """,
+        None,
+        "No identifier for definition name",
+    )
+
+    s = Scanner("""
+    function a() integer
+        1
+    """)
+    p = Parser(s)
+    with pytest.raises(ParseError) as excinfo:
+        p.parse()
+    # No colon inside of definition
+
+    s = Scanner("""
+    function a() integer
+    """)
+    p = Parser(s)
+    with pytest.raises(ParseError) as excinfo:
+        p.parse()
+    # No body in definition
+
+
+def test_return_type():
     s = Scanner("""
     function test(): integer
         1
     """)
     p = Parser(s)
-    assert p.parse() is None, "Simple program should parse"
+    assert p.parse() is None, "Program should allow integer return type"
+
+    s = Scanner("""
+    function test(): boolean
+        1
+    """)
+    p = Parser(s)
+    assert p.parse() is None, "Program should allow boolean return type"
+
+
+def test_invalid_return_type():
+    s = Scanner("""
+    function test(): function
+        1
+    """)
+    p = Parser(s)
+    with pytest.raises(ParseError) as excinfo:
+        p.parse()
+    # assert excinfo, "Program should raise on function return type"
+
+    s = Scanner("""
+    function test(): 123
+        1
+    """)
+    p = Parser(s)
+    with pytest.raises(ParseError) as excinfo:
+        p.parse()
+    # assert excinfo, "Program should raise on integer literal return type"
+
+    s = Scanner("""
+    function test(): random_identifier
+        1
+    """)
+    p = Parser(s)
+    with pytest.raises(ParseError) as excinfo:
+        p.parse()
+    # assert excinfo, "Program should raise on random identifier as return type"
 
 
 def test_parameters():
@@ -85,58 +191,70 @@ def test_invalid_parameter():
     with pytest.raises(ParseError) as excinfo:
         p.parse()
     # assert excinfo, "Program should raise if parameter missing colon"
-
-
-def test_return_type():
     s = Scanner("""
-    function test(): integer
-        1
-    """)
-    p = Parser(s)
-    assert p.parse() is None, "Program should allow integer return type"
-
-    s = Scanner("""
-    function test(): boolean
-        1
-    """)
-    p = Parser(s)
-    assert p.parse() is None, "Program should allow boolean return type"
-
-
-def test_invalid_return_type():
-    s = Scanner("""
-    function test(): function
+    function test(a : integer, ): integer
         1
     """)
     p = Parser(s)
     with pytest.raises(ParseError) as excinfo:
         p.parse()
-    # assert excinfo, "Program should raise on function return type"
+    # assert excinfo, "Program should raise if trailing comma
+
+
+def test_print_expression():
+    s = Scanner("""
+    function test(a : integer): integer
+        print(12)
+        1
+    """)
+    p = Parser(s)
+    assert p.parse() is None, "Program should allow print statements"
 
     s = Scanner("""
-    function test(): 123
+    function test(a : integer): integer
+        print(1)
+        print(2)
+        print(3)
+        1
+    """)
+    p = Parser(s)
+    assert p.parse() is None, "Program should allow multiple print statements"
+
+    s = Scanner("""
+    function test(a : integer): integer
+        print(not 12 or 3 + 4 * 5)
+        1
+    """)
+    p = Parser(s)
+    assert p.parse() is None, "Program should allow complex print statements"
+
+
+def test_raises_invalid_print():
+    s = Scanner("""
+    function test(a : integer): integer
+        print(or 12)
         1
     """)
     p = Parser(s)
     with pytest.raises(ParseError) as excinfo:
         p.parse()
-    # assert excinfo, "Program should raise on integer literal return type"
-
+    # assert excinfo, "Program should riase on invalid body of print
     s = Scanner("""
-    function test(): random_identifier
+    function test(a : integer): integer
+        print()
         1
     """)
     p = Parser(s)
     with pytest.raises(ParseError) as excinfo:
         p.parse()
-    # assert excinfo, "Program should raise on random identifier as return type"
+    # assert excinfo, "Program should raise on empty print
 
 
 def test_all_programs():
     program_path = Path(__file__).parent / "programs"
     for file in program_path.glob("*.kln"):
         # This program is currently invalid
-        if str(file).endswith("egyptian-factions.kln"):
+        if str(file).endswith("egyptian-fractions.kln"):
             continue
         path = program_path / file
         s = Scanner(path.open().read())
