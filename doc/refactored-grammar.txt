@@ -1,6 +1,7 @@
 // Summary of Changes:
 // Changed formal parameters by left factoring to extract "FORMAL-PARAMETERS-REST"
 // Changed expression by first eliminating left recursion, then left factoring out "EXPRESSION-REST"
+// Changed simple expression and factored out "SIMPLE-EXPRESSION-REST"
 // Changed term by rewriting to eliminate left recursion and then left factoring by adding TERM-REST
 // Changed factor to eliminate ambiguity on "IDENTIFIER" token by adding "FACTOR-REST" when IDENTIFIER is encountered
 // Changed formal arguments to eliminate ambiguity when EXPRESSION is encountered by adding FORMAL-ARGUMENTS-REST
@@ -39,6 +40,7 @@
                         | "<" <EXPRESSION>
                         | ε
 
+  // Changed simple expression and factored out "SIMPLE-EXPRESSION-REST"
   <SIMPLE-EXPRESSION> ::= <TERM> <SIMPLE-EXPRESSION-REST>
 
     <SIMPLE-EXPRESSION-REST> ::= "or" <SIMPLE-EXPRESSION>
@@ -49,7 +51,6 @@
                // Changed term by rewriting to eliminate left recursion and then left factoring by adding TERM-REST
                <TERM> ::= <FACTOR> <TERM-REST>
         
-        // Fixed to be followed by a term here instead of a factor
         <TERM-REST> ::= "*" <TERM>
                       | "/" <TERM>
                       | "and" <TERM>
