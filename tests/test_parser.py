@@ -466,6 +466,55 @@ def test_invalid_factor():
     )
 
 
+def test_simple_expression():
+    success_case(
+        """
+    function test(): integer
+        1 or 2 or 3 + 4 + 5 - 6 - 7
+    """,
+        None,
+        "Many simple expressions in a row should work",
+    )
+
+    success_case(
+        """
+    function test(): integer
+        1 or (2 or (3 + 4) - 5) - (6 + 7)
+    """,
+        None,
+        "Simple expression should allow nested complex expressions",
+    )
+
+    success_case(
+        """
+    function test(): integer
+        1 - - 2
+    """,
+        None,
+        "Adding a negative value should be allowed",
+    )
+
+
+def test_invalid_simple_expression():
+    error_case(
+        """
+    function test(): integer
+        1 or or 2
+    """,
+        None,
+        "Double or statement should fail",
+    )
+
+    error_case(
+        """
+    function test(): integer
+        1 + boolean
+    """,
+        None,
+        "Plus statement followed by type should fail",
+    )
+
+
 def test_all_programs():
     program_path = Path(__file__).parent / "programs"
     for file in program_path.glob("*.kln"):
