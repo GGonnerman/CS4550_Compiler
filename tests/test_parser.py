@@ -340,6 +340,55 @@ def test_invalid_argument_list():
     )
 
 
+def test_term():
+    success_case(
+        """
+        function add(): integer
+            1 * true * 3 * false / 5 / true and 7 and false and 9
+        """,
+        None,
+        "Any valid terms should work",
+    )
+
+    success_case(
+        """
+        function add(): integer
+            1 * my_fun(12) / 2 * (1 + 2)
+        """,
+        None,
+        "Complex terms with factors inside should work",
+    )
+
+
+def test_invalid_term():
+    error_case(
+        """
+        function add(): integer
+            1 * / 2
+        """,
+        None,
+        "Term rest (times) followed by non-term (division) should fail",
+    )
+
+    error_case(
+        """
+        function add(): integer
+            1 / function
+        """,
+        None,
+        "Term rest (division) by non-term (function keyword) should fail",
+    )
+
+    error_case(
+        """
+        function add(): integer
+            1 and or 2
+        """,
+        None,
+        "Term rest (and) by non-term ('or') should fail",
+    )
+
+
 def test_factor():
     success_case(
         """
