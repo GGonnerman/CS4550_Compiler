@@ -56,5 +56,5 @@ class Parser:
                     )
 
                 raise ParseError(
-                    f"Invalid sequence {key[0]} followed by {key[1]} on {next_token.position}. {expected_message}",
+                    f"Invalid transition from {key[0]} to {key[1]} on {next_token.position}. {expected_message}",
                 )

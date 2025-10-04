@@ -48,8 +48,7 @@ Produced by the **Compile Squad**
 - `tests/test_scanner.py`: contains a large number of tests to help validate and ensure functionality of the klein scanner
 - `tests/test_position.py`: contains a few tests for the position tracker
 - `tests/test_parser.py`: contains a number of tests for the parser
-- `tests/parser-programs`: specific programs used in the parser testing program 
-- `tests/programs`: contains professor provided klein programs (used in testing)
+- `tests/programs/`: contains professor provided klein programs (used in testing)
 
 ## Known Bugs
 

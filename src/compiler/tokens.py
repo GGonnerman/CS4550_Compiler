@@ -50,15 +50,6 @@ class Token:
     def value(self):
         return self.token_value
 
-    #    @override
-    #    def __repr__(self):
-    #        display = self.token_type.name.lower()
-    #        if self.token_value is not None:
-    #            # Just makes sure the tabs all line up nicely
-    #            display += " " * (20 - len(display))
-    #            display += f"\t{self.value()}"
-    #        return display
-
     @override
     def __str__(self):
         out = str(self.token_type)

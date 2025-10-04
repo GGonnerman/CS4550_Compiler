@@ -22,7 +22,7 @@ def error_case(
     p = Parser(s)
     with pytest.raises(ParseError) as excinfo:
         p.parse()
-    # assert str(excinfo) == expected_message, error_message
+    # assert str(excinfo.value) == expected_message, error_message
 
 
 def test_parse_empty_file():
@@ -550,7 +550,7 @@ def test_invalid_simple_expression():
         1 or or 2
     """,
         None,
-        "Double or statement should fail",
+        "Repeated 'or' statement should fail",
     )
 
     error_case(
