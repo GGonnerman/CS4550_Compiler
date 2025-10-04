@@ -53,8 +53,8 @@ class Token:
     @override
     def __str__(self):
         out = str(self.token_type)
-        if self.value is not None:
-            out += f":{self.value}"
+        if self.token_value is not None:
+            out += f":{self.token_value}"
         return out
 
     @override
