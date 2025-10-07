@@ -1,0 +1,37 @@
+(*
+  FILE  : sum-factors.kln
+  AUTHOR: Eugene Wallingford
+  DATE  : 2019/09/10
+  TASK  : prints all the factors of an integer n, summing them
+          along the way, and returns n - sum()
+*)
+
+
+function loopToN(n : integer, current : integer, sum : integer) : integer
+  if n = current
+     then n - sum
+     else testAndLoop(n, current, sum)
+
+function testAndLoop(n : integer,
+                     current : integer,
+                     sum : integer) : integer
+  if divides(current, n)
+     then printCurrentAndLoop(n, current, sum+current)
+     else loopToN(n, current+1, sum)
+
+function printCurrentAndLoop(n : integer,
+                             current : integer,
+                             sum : integer) : integer
+  print(current)
+  loopToN(n, current+1, sum)
+
+function divides( a : integer, b : integer) : boolean
+  remainder(b, a) = 0
+
+function remainder( num : integer, den : integer) : integer
+  if num < den
+     then num
+     else remainder(num-den, den)
+
+function main( n : integer ) : integer
+  loopToN(n, 1, 0)      (* n, current, sum *)

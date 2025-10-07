@@ -1,0 +1,39 @@
+(* --------------------------------------------------------------- *
+ *                                                                 *
+ * This program prints the first n digits of a/b and returns       *
+ * -- and prints -- the division's remainder at that point.        *
+ * For example,                                                    *
+ *   $ klein divide 7 12 2                                         *
+ *   5                                                             *
+ *   8                                                             *
+ *   4                                                             *
+ *   $ klein divide 7 12 4                                         *
+ *   5                                                             *
+ *   8                                                             *
+ *   3                                                             *
+ *   3                                                             *
+ *   4                                                             *
+ *                                                                 *
+ * --------------------------------------------------------------- *)
+
+function main(a : integer, b : integer, n : integer) : integer
+    if n = 0
+       then a
+       else printAndDivide(a, b, n)
+
+(* --------------------------------------------------------------- *
+ * primary function                                                *
+ * --------------------------------------------------------------- *)
+
+function printAndDivide(a : integer, b : integer, n : integer) : integer
+    print((10 * a) / b)
+    main (MOD(a*10, b), b, n-1)
+
+(* --------------------------------------------------------------- *
+ * functions from the Klein library                                *
+ * --------------------------------------------------------------- *)
+
+function MOD( m : integer, n : integer ) : integer
+    m - m/n * n
+
+(* --------------------------------------------------------------- *)

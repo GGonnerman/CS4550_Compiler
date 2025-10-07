@@ -1,11 +1,11 @@
-from enum import IntEnum, auto
+from enum import StrEnum, auto
 
 from typing_extensions import override
 
 from compiler.position import Position
 
 
-class TokenType(IntEnum):
+class TokenType(StrEnum):
     INTEGER = auto()
     KEYWORD_INTEGER = auto()
     KEYWORD_BOOLEAN = auto()
@@ -31,6 +31,10 @@ class TokenType(IntEnum):
     EQUAL = auto()
     END_OF_FILE = auto()
 
+    @override
+    def __str__(self):
+        return self.name.upper()
+
 
 class Token:
     def __init__(
@@ -47,13 +51,11 @@ class Token:
         return self.token_value
 
     @override
-    def __repr__(self):
-        display = self.token_type.name.lower()
+    def __str__(self):
+        out = str(self.token_type)
         if self.token_value is not None:
-            # Just makes sure the tabs all line up nicely
-            display += " " * (20 - len(display))
-            display += f"\t{self.value()}"
-        return display
+            out += f":{self.token_value}"
+        return out
 
     @override
     def __eq__(self, other: object):

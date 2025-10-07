@@ -1,0 +1,148 @@
+(* ---------------------------------------------------------------
+
+   This program prints all excellent numbers of a given length, the
+   command-line argument length.
+
+   A number m is "excellent" if, when split in half as m = ab,
+   b*b - a*a = m.  For example, 48 is excellent, because
+   8**2 - 4**2 == 48.
+
+   http://programmingpraxis.com/2015/03/24/excellent-numbers/
+
+   I take advantage of the fact that, with n = length/2, we can
+   rewrite m as a*10**n + b, set the two m's equal to one another,
+   simplify to b * b – b == a * (a + 10**n), and solve for b:
+
+            1 + sqrt[4a^2 + 4(10^n)a + 1]
+        b = -----------------------------
+                         2
+
+   So we loop through all values for a with n digits and find its b.
+   If b is an integer, we check to see if m = ab is excellent.
+
+   --------------------------------------------------------------- *)
+
+(* --------------------------------------------------------------- *)
+(* functions from the Klein library                                *)
+(* --------------------------------------------------------------- *)
+
+function MOD(m : integer, n : integer) : integer
+  m - n*(m/n)
+
+function EXP(m : integer, n : integer) : integer
+  if n = 0
+     then 1
+     else m * EXP(m, n-1)
+
+function ODD( n : integer ) : boolean
+  if 0 < n 
+     then (2 * (n/2)) < n
+     else ODD(-n)
+
+function LE( p : integer, q : integer ) : boolean
+    (p < q) or (p = q)
+
+function SQRT( n : integer ) : integer
+    SQRTSEARCH( n, 0, n )
+
+function SQRTSEARCH( n : integer, low : integer, high : integer ) : integer
+    if LE( high, low + 1 ) then
+       if LE( n - (low * low), (high * high) - n ) then
+          low
+       else
+          high
+    else
+       SQRTSPLIT( n, low, high, (low + high)/2 )
+
+function SQRTSPLIT( n : integer,
+                    low : integer, high : integer, mid : integer ) : integer
+    if LE( mid*mid, n ) then
+       SQRTSEARCH( n, mid, high )
+    else
+       SQRTSEARCH( n, low, mid )
+
+(* --------------------------------------------------------------- *)
+(* utility functions                                               *)
+(* --------------------------------------------------------------- *)
+
+function EVEN(n : integer) : boolean
+  n = (2 * (n/2))
+
+function ISROOT(r : integer, n : integer) : boolean
+  n = r*r
+
+(* --------------------------------------------------------------- *)
+(* functions to determine if a number is excellent                 *)
+(* --------------------------------------------------------------- *)
+
+function length(n : integer) : integer
+  if n < 10
+     then 1
+     else 1 + length(n / 10)
+
+function a(n : integer) : integer
+  (* we could implement this with take *)
+  n / EXP(10, length(n)/2)
+
+function b(n : integer) : integer
+  (* we could implement this with drop *)
+  MOD(n, EXP(10, length(n)/2))
+
+function excellentDiff(a : integer, b : integer) : integer
+  b*b - a*a
+
+function isExcellentSwitch(n : integer, length : integer) : boolean
+  if ODD(length)
+     then false
+     else n = excellentDiff(a(n), b(n))
+
+function isExcellent(n : integer) : boolean
+  isExcellentSwitch(n, length(n))
+
+(* --------------------------------------------------------------- *)
+(* functions for the main loop to generate excellent numbers       *)
+(* --------------------------------------------------------------- *)
+
+function printCandidateAndContinue(a : integer, n : integer,
+                                   upper : integer, candidate : integer)
+         : boolean
+  print(candidate)
+  aLoop(a+1, n, upper)
+
+function aLoop3(a         : integer,
+                n         : integer,
+                upper     : integer,
+                det       : integer,
+                root      : integer,
+                candidate : integer) : boolean
+  if ISROOT(root, det) and EVEN(root + 1) and isExcellent(candidate)
+     then printCandidateAndContinue(a, n, upper, candidate)
+     else aLoop(a+1, n, upper)
+
+function aLoop2(a     : integer,
+                n     : integer,
+                upper : integer,
+                det   : integer,
+                root  : integer) : boolean
+  aLoop3(a, n, upper, det, root, a * EXP(10, n) + ((root + 1) / 2))
+
+function aLoop1(a     : integer,
+                n     : integer,
+                upper : integer,
+                det   : integer) : boolean
+  aLoop2(a, n, upper, det, SQRT(det))
+
+function aLoop(a : integer, n : integer, upper : integer) : boolean
+  if a < upper
+     then aLoop1(a, n, upper, 4*EXP(a, 2) + 4*EXP(10, n)*a + 1)
+     else true
+
+function createLoop(a : integer, n : integer)  : boolean
+  aLoop(a, n, 10*a)
+
+(* ---------------------------------------------------------------- *)
+
+function main(length : integer) : boolean
+  createLoop(EXP(10, length/2 - 1), length/2)
+
+(* ---------------------------------------------------------------- *)

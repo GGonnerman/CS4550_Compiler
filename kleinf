@@ -1,0 +1,4 @@
+#!/bin/bash
+
+PROGRAM_CONTENT=$(cat $1)
+./.venv/bin/klein_parse_program "$PROGRAM_CONTENT"

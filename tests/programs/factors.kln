@@ -1,0 +1,36 @@
+(*
+   FILE  : factors.kln
+   AUTHOR: Eugene Wallingford
+   DATE  : 2010/11/11
+   TASK  : all the factors of an integer n less than n
+           and returns n (the largest factor)
+*)
+
+function main( n : integer ) : integer
+   loopToN(n, 1)
+
+function loopToN(n : integer, current : integer) : integer
+   if n = current then
+      n
+   else
+      testAndLoop(n, current)
+
+function testAndLoop(n : integer, current : integer) : integer
+   if divides( current, n ) then
+      printAndLoop(n, current)
+   else
+      loopToN(n, current+1)
+
+function printAndLoop(n : integer, current : integer) : integer
+   print(current)
+   loopToN(n, current+1)
+
+function divides( a : integer, b : integer) : boolean
+   remainder(b, a) = 0
+
+function remainder( num : integer, den : integer) : integer
+   if num < den then
+      num
+   else
+      remainder( num-den, den)
+

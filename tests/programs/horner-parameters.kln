@@ -1,0 +1,54 @@
+(* --------------------------------------------------------------------
+   This program defines and evaluates a polynomial -- with integer
+   coefficients and an integer solution, of course -- using Horner's
+   Rule. The main program's argument is the value at which to evaluate
+   the polynomial.  The polynomial's coefficients are defined using
+   an array indexed 0 through n, where n is the degree of the polynomial
+   and coefficient[i] is the coefficient on the ith-power term.
+   The array is simulated by a function, which gives one example
+   of how to represent more complex data types using Klein's built
+   in types of boolean, integer, and function.
+
+   Based on code written by Doug Baldwin for his MinimL language.
+   -------------------------------------------------------------------- *)
+
+(* --------------------------------------------------------------------
+   This main function hard-codes the degree of the polynomial by the
+   number of command-line args it takes.
+   -------------------------------------------------------------------- *)
+
+function main( coeff3 : integer,
+               coeff2 : integer,
+               coeff1 : integer,
+               coeff0 : integer,
+               x      : integer ) : integer
+    horner( x, 3, 0, coeff3, coeff2, coeff1, coeff0 )
+
+function horner( x : integer, n : integer, value : integer,
+                 coeff3 : integer, coeff2 : integer,
+                 coeff1 : integer, coeff0 : integer )
+               : integer
+    if n < 0 then
+        value
+    else
+        horner( x, n - 1,
+               (value * x) +
+                  coefficient(n, coeff3, coeff2, coeff1, coeff0),
+               coeff3, coeff2, coeff1, coeff0 )
+
+(* --------------------------------------------------------------------
+   This function defines the polynomial specified by the coeff-i's.
+   -------------------------------------------------------------------- *)
+
+function coefficient( i : integer,
+                      coeff3 : integer, coeff2 : integer,
+                      coeff1 : integer, coeff0 : integer )
+                    : integer
+    if i < 1 then
+        coeff0
+    else if i < 2 then
+        coeff1
+    else if i < 3 then
+        coeff2
+    else
+        coeff3

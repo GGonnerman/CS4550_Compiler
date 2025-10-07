@@ -1,0 +1,35 @@
+(* ----------------------------------------------
+   functions from the Klein library
+   ---------------------------------------------- *)
+
+function MOD(m : integer, n : integer) : integer
+  m - n*(m/n)
+
+(* ----------------------------------------------
+   determine if a number is a palindrome
+   ---------------------------------------------- *)
+
+function reverse(n : integer) : integer
+  reverseL(n, 0)
+
+function reverseL(n : integer, nR : integer) : integer
+  if n = 0
+     then nR
+     else reverseL(n / 10, 10 * nR + MOD(n, 10))
+
+(* ----------------------------------------------
+   determine if a number is a palindrome
+   ---------------------------------------------- *)
+
+function isPalindrome(n : integer) : boolean
+  0 = (n - reverse(n))
+
+(* ----------------------------------------------
+   main function: takes command-line argument
+   ---------------------------------------------- *)
+
+function main(number : integer): boolean
+  print(number)
+  print(reverse(number))
+  isPalindrome(number)
+

@@ -1,0 +1,4 @@
+(* This progrom wont work because there is a trailing comma in the parameter list for main *)
+function main(height: integer,): integer
+    print(height)
+    height

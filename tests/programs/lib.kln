@@ -1,0 +1,149 @@
+(* ---------------------------------------------------------------
+   This Klein library began as a port of the MinimL library, a
+   collection of utility routines written in MinimL for MinimL by
+   MinimL creator Doug Baldwin.  Note the convention that the
+   names of library functions are in all upper case letters, to
+   help programmers avoid defining conflicting names of their own.
+
+   History:
+     January  2002 -- MinimL library created by Doug Baldwin
+     December 2007 -- Klein library ported by Eugene Wallingford
+     October  2013 -- Klein library updated by Eugene Wallingford
+     October  2015 -- EXP function added by Eugene Wallingford
+     October  2017 -- MAXINT and MININT added by Eugene Wallingford
+     October  2019 -- MAXINT and MININT updated to 2^31 values
+
+   We need the main function because our language specification
+   requires one.  Otherwise, we would not be able to compile this
+   file and test its functions.  (Adding separate compilation of
+   a file of functions without a main would be an interesting
+   extension to Klein!)
+   --------------------------------------------------------------- *)
+
+function main( testArgument : integer ) : boolean
+    print( SQRT(testArgument) )
+    ODD( testArgument )
+
+(* ---------------------------------------------------------------
+   constant functions
+        These are handy for doing integer computations without
+        generating overflow or underflow.
+   ---------------------------------------------------------------- *)
+
+function MAXINT():integer  2147483647
+function MININT():integer -2147483647 - 1
+
+(* ---------------------------------------------------------------
+   boolean functions
+        We defined functions even for the two primitive operators
+        because, in an older version of the language, we did not
+        have ()s as a grouping mechanism.  They remain for
+        consistency and backward compatibility.
+   ---------------------------------------------------------------- *)
+
+function LT( p : integer, q : integer ) : boolean
+    p < q
+
+function EQ( p : integer, q : integer ) : boolean
+    p = q
+
+function NE( p : integer, q : integer ) : boolean
+    not EQ(p, q)
+
+function LE( p : integer, q : integer ) : boolean
+    LT(p, q) or EQ(p, q)
+
+function GE( p : integer, q : integer ) : boolean
+    not LT(p, q)
+
+function GT( p : integer, q : integer ) : boolean
+    not LE(p, q)
+
+function OR( p : boolean, q : boolean ) : boolean
+    p or q
+
+function AND( p : boolean, q : boolean ) : boolean
+    if p then q else false
+
+(* ---------------------------------------------------------------
+   arithmetic functions
+        We defined functions even for the five primitive operators
+        because, in an older version of the language, we did not
+        have ()s as a grouping mechanism.  They remain for
+        consistency and backward compatibility.
+   ---------------------------------------------------------------- *)
+
+function PLUS( p : integer, q : integer ) : integer
+    p + q
+
+function MINUS( p : integer, q : integer ) : integer
+    p - q
+
+function TIMES( p : integer, q : integer ) : integer
+    p * q
+
+function DIV( p : integer, q : integer ) : integer
+    p / q
+
+function NEG( n : integer ) : integer
+    -n
+
+function ABS( n : integer ) : integer
+    if 0 < n then n else NEG(n)
+
+function MOD( m : integer, n : integer ) : integer
+    m - m/n * n
+
+function EXP( m : integer, n : integer ) : integer
+    if n = 0 then 1 else m * EXP(m, n-1)
+
+(* ---------------------------------------------------------------
+   ODD  This is based on the idea that n = 2 * floor( n/2 ) only
+        if n is even, and n is never less than 2 * floor( n/2 ).
+        Thus asking if n <= 2 * floor( n/2 ) is equivalent to
+        asking if n is even; n being odd is simply the complement
+        of this.  This function also does a bit of sign-checking
+        to accomodate negative as well as positive arguments, since
+        the function it uses to calculate floor( n/2 ) only handles
+        natural numbers.
+   ---------------------------------------------------------------- *)
+
+function ODD( n : integer ) : boolean
+    if LE( 0, n ) then
+       GT( n, DIV(n,2) + DIV(n,2) )
+    else
+       GT( NEG(n), DIV(NEG(n),2) + DIV(NEG(n),2) )
+
+(* ---------------------------------------------------------------
+   SQRT  The algorithm uses binary search.  It takes advantage of
+         the fact that for the naturals, 0 <= sqrt(n) <= n, to
+         initialize the bounds for the search.  When the search
+         reaches a point where the bounds are within one of each
+         other, it chooses the one that is closest to the true
+         square root to return.
+
+   The function SQRTSEARCH directs the binary search, while
+   SQRTSPLIT splits the range within this search, done in a
+   separate function so that the program does not have to recompute
+   the midpoint repeatedly.
+   ---------------------------------------------------------------- *)
+
+function SQRT( n : integer ) : integer
+    SQRTSEARCH( n, 0, n )
+
+function SQRTSEARCH( n : integer, low : integer, high : integer ) : integer
+    if LE( high, low + 1 ) then
+       if LE( n - TIMES(low,low), TIMES(high,high) - n ) then
+          low
+       else
+          high
+    else
+       SQRTSPLIT( n, low, high, PLUS(low, high)/2 )
+
+function SQRTSPLIT( n : integer,
+                    low : integer, high : integer, mid : integer ) : integer
+    if LE( mid*mid, n ) then
+       SQRTSEARCH( n, mid, high )
+    else
+       SQRTSEARCH( n, low, mid )
+

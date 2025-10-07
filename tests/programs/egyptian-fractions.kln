@@ -1,0 +1,31 @@
+(* -------------------------------------------------------------------- *
+ * https://blog.plover.com/math/egyptian-fractions.html                 *
+ * https://www.cs.uni.edu/~wallingf/teaching/cs4550/sessions/10.html    *
+ *                                         #a-klein-program-to-write    *
+ *                                                                      *
+ * At one point in their history, the Egyptians did not have a general  *
+ * way of writing fractions as m/n.  Instead, they wrote such fractions *
+ * as the sums of unit fractions 1/n, for different n.  For example,    *
+ * they could write 3/5 as 1/2 + 1/10, which we can abbreviate as       *
+ * [2, 10].  4/9 can be written as 1/3 + 1/9, or [3, 9].                *
+ * -------------------------------------------------------------------- *)
+
+function main(m: integer, n: integer): integer
+    if (m = 1)
+       then n
+       else
+         if MOD(n, m) = 0
+            then n // m
+            else print_and_continue(m, n, n//m + 1)
+
+(* print the unit fraction that was found,    *)
+(* then compute the fraction for m/n - 1/unit *)
+
+function print_and_continue(m: integer, n: integer, unit: integer): integer
+    print(unit)
+    main((unit * m) - n, n * unit)
+
+(* from the Klein library *)
+
+function MOD(m: integer, n: integer): integer
+    m - m/n * n

@@ -1,0 +1,85 @@
+(*
+   ported by Eugene Wallingford from a program written
+   in another language by former student Andrew Howard
+
+   A circular prime is a prime number all of which's cyclical
+   permutations are prime.  For example, 37 is a circular prime,
+   because 73 is also prime.  113 is, too, because 131 and 311
+   are prime.
+
+   https://en.wikipedia.org/wiki/Circular_prime
+*)
+
+function main(x:integer):integer
+  circularPrimesTo(x)
+
+function circularPrimesTo(x:integer):integer
+  circularPrimesToHelper(x+1, 2, 0)
+
+function circularPrimesToHelper(top:integer, x:integer, count:integer):integer
+  if x < top then
+     if isCircularPrime(x) then
+        circularPrimesToHelper(top, x+1, count+1)
+     else
+        circularPrimesToHelper(top, x+1, count)
+  else
+     count
+
+function isCircularPrime(x:integer):boolean
+  if isCircularPrimeHelper( x, log10(x)+1 ) then
+     report(x)
+   else
+     false
+
+function isCircularPrimeHelper(x:integer, turns:integer):boolean
+  if turns = 0 then
+     true
+  else
+     isPrime(x) and isCircularPrimeHelper( rotate(x), turns-1 )
+
+function report(x:integer):boolean
+  print(x)
+  true
+
+function rotate(x:integer):integer
+  x/10 + ( mod(x,10) * pow(10, log10(x)) )
+
+function pow(x:integer,y:integer):integer
+  powHelper(x,y,x)
+
+function powHelper(base:integer, power:integer, total:integer):integer
+  if power = 0 then
+     1
+  else if power = 1 then
+     total
+  else
+     powHelper(base, power-1, base*total)
+
+function log10(x:integer):integer
+  log10Helper(x,0)
+
+function log10Helper(x:integer, y:integer):integer
+  if (x / 10) = 0 then
+     y
+  else
+     log10Helper( x/10, y+1 )
+
+(* -----  code blatantly stolen from sieve  ----- *)
+
+function isPrime( n : integer ) : boolean
+  not hasDivisorFrom(2, n)
+
+function hasDivisorFrom( i : integer, n : integer) : boolean
+  if i < n then
+     divides(i, n) or hasDivisorFrom(i+1, n)
+  else
+     false
+
+function divides( a : integer, b : integer) : boolean
+  mod(b, a) = 0
+
+function mod( num : integer, den : integer) : integer
+  if num < den then
+     num
+  else
+     mod(num-den, den)

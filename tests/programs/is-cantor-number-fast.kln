@@ -1,0 +1,29 @@
+(*  Generalized Cantor Sets
+
+    https://twitter.com/wtgowers/status/1170692765342216192
+
+       The Cantor set is the set of all real numbers between 0 and 1
+       that have just 0s and 1s in their ternary expansion (i.e.,
+       no 2s). It is what you get if you continue this process of
+       "removing the middle third" to infinity.
+ 
+    We can generalize this to think of an integer Cantor set to
+    consist of all integers that have just 0s and 1s in their base-3
+    representation.
+ 
+    We could convert n to base-3 and then check the result digit-by-
+    digit.  That's what I do in <is-cantor-number.kln>.  But we don't
+    really care about the base-3 value itself, so we can compute the
+    answer more efficiently: check each digit in the base-3 value as
+    we generate it, rather than make a second pass.  The result is a
+    single tail-recursive function.
+*)
+
+function main(n : integer): boolean
+  if n < 3
+     then n < 2
+     else main(n / 3) and main(MOD(n, 3))
+
+(* from the Klein library *)
+function MOD(m : integer, n : integer): integer
+  m - m/n * n

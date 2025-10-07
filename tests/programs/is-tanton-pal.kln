@@ -1,0 +1,60 @@
+(* Tanton palindromes
+
+    https://twitter.com/jamestanton/status/985871390476660736
+
+    > x = [write a number in base two]
+    > repeat
+    >   x = x + reverse(x)
+    > until is_palindrome(x)
+    >
+    > Does this program terminate?
+
+    eg twenty-five --> 11001
+       -->   11001 +  10011 = 101100
+       -->  101100 + 001101 = 111001
+       -->  101100
+       -->  111001
+       --> 1100000
+       --> 1100011 is a palindrome.
+    250   => True
+    2509  => True
+    2599  => True
+    25099 => ????  kept running...
+*)
+
+function main(x : integer): boolean
+  is_tanton_pal_bin(binary_for(x))
+
+function is_tanton_pal_bin(x : integer): boolean
+  if is_palindrome(x)
+     then true
+     else is_tanton_pal_bin( add_boolean(x, reverse(x)) )
+
+(* functions dealing with numbers in bases 2 and 10 *)
+
+function binary_for(n : integer): integer
+  if n < 2
+     then n
+     else 10 * binary_for(n / 2) + MOD(n, 2)
+
+function decimal_for(n : integer): integer
+  if n < 10
+     then n
+     else 2 * decimal_for(n / 10) + MOD(n, 10)
+
+function add_boolean(m : integer, n : integer): integer
+  binary_for(decimal_for(m) + decimal_for(n))
+
+(* functions dealing with numbers as sequences as digits *)
+
+function is_palindrome(n : integer): integer
+  n = reverse(n)
+
+function reverse(n : integer): integer
+  reverseL(n, 0)
+
+function reverseL(n : integer, nR : integer): integer
+  if n = 0
+     then nR
+     else reverseL(n / 10, 10 * nR + MOD(n, 10))
+

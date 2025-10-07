@@ -1,8 +1,9 @@
-(* This program calculates BMI*)
-
+(* This program doesn't work because an if statement needs a then after *)
 function BMI(height_inches : integer, weight : integer): integer
-    print(sqr_height(height) * weight)
-    sqr_height(height) * weight
+    if height_inches = 0
+        print(0)
+        0
+    else sqr_height(height) * weight
 
 function sqr_height(height : integer): integer
     height * height
