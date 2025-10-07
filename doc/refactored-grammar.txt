@@ -5,6 +5,14 @@
 // Changed term by rewriting to eliminate left recursion and then left factoring by adding TERM-REST
 // Changed factor to eliminate ambiguity on "IDENTIFIER" token by adding "FACTOR-REST" when IDENTIFIER is encountered
 // Changed formal arguments to eliminate ambiguity when EXPRESSION is encountered by adding FORMAL-ARGUMENTS-REST
+// Refactored to make implementing semantic actions easier; won't change first/follow sets
+//     https://www.cs.uni.edu/~wallingf/teaching/cs4550/sessions/10.html#:~:text=Refactoring%20the%20Klein%20Grammar
+// Changed rules:
+// FORMAL-PARAMETERS-REST
+// EXPRESSION-REST
+// SIMPLE-EXPRESSION-REST
+// TERM-REST
+// FORMAL-ARGUMENTS-REST
  
             <PROGRAM> ::= <DEFINITION-LIST>
 
@@ -20,7 +28,7 @@
   // Changed formal parameters by left factoring to extract "FORMAL-PARAMETERS-REST"
   <FORMAL-PARAMETERS> ::= <ID-WITH-TYPE> <FORMAL-PARAMETERS-REST>
 
-  <FORMAL-PARAMETERS-REST> ::= "," <FORMAL-PARAMETERS>
+  <FORMAL-PARAMETERS-REST> ::= "," <ID-WITH-TYPE> <FORMAL-PARAMETERS-REST>
                              | ε
 
        <ID-WITH-TYPE> ::= <IDENTIFIER> ":" <TYPE>
@@ -36,24 +44,24 @@
          // Changed expression by first eliminating left recursion, then left factoring out "EXPRESSION-REST"
          <EXPRESSION> ::= <SIMPLE-EXPRESSION> <EXPRESSION-REST>
          
-    <EXPRESSION-REST> ::= "=" <EXPRESSION>
-                        | "<" <EXPRESSION>
+    <EXPRESSION-REST> ::= "=" <SIMPLE-EXPRESSION> <EXPRESSION-REST>
+                        | "<" <SIMPLE-EXPRESSION> <EXPRESSION-REST>
                         | ε
 
   // Changed simple expression and factored out "SIMPLE-EXPRESSION-REST"
   <SIMPLE-EXPRESSION> ::= <TERM> <SIMPLE-EXPRESSION-REST>
 
-    <SIMPLE-EXPRESSION-REST> ::= "or" <SIMPLE-EXPRESSION>
-                               | "+" <SIMPLE-EXPRESSION>
-                               | "-" <SIMPLE-EXPRESSION>
+    <SIMPLE-EXPRESSION-REST> ::= "or" <TERM> <SIMPLE-EXPRESSION-REST>
+                               | "+" <TERM> <SIMPLE-EXPRESSION-REST>
+                               | "-" <TERM> <SIMPLE-EXPRESSION-REST>
                                | ε
 
                // Changed term by rewriting to eliminate left recursion and then left factoring by adding TERM-REST
                <TERM> ::= <FACTOR> <TERM-REST>
         
-        <TERM-REST> ::= "*" <TERM>
-                      | "/" <TERM>
-                      | "and" <TERM>
+        <TERM-REST> ::= "*" <FACTOR> <TERM-REST>
+                      | "/" <FACTOR> <TERM-REST>
+                      | "and" <FACTOR> <TERM-REST>
                       | ε
 
              // Changed factor to eliminate ambiguity on "IDENTIFIER" token by adding "FACTOR-REST" when IDENTIFIER is encountered
@@ -73,7 +81,7 @@
    // Changed formal arguments to eliminate ambiguity when EXPRESSION is encountered by adding FORMAL-ARGUMENTS-REST
    <FORMAL-ARGUMENTS> ::= <EXPRESSION> <FORMAL-ARGUMENTS-REST>
   
-<FORMAL-ARGUMENTS-REST> ::= "," <FORMAL-ARGUMENTS>
+<FORMAL-ARGUMENTS-REST> ::= "," <EXPRESSION> <FORMAL-ARGUMENTS-REST>
                           | ε
 
             <LITERAL> ::= <INTEGER-LITERAL>
