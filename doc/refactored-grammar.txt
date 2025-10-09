@@ -14,13 +14,13 @@
 // TERM-REST
 // FORMAL-ARGUMENTS-REST
  
-            <PROGRAM> ::= <DEFINITION-LIST>
+            <PROGRAM> ::= <DEFINITION-LIST> <MAKE-DEFINITION-LIST> <MAKE-PROGRAM>
 
     <DEFINITION-LIST> ::= ε
                         | <DEFINITION> <DEFINITION-LIST>
 
-         <DEFINITION> ::= "function" <IDENTIFIER> "(" <PARAMETER-LIST> ")" ":" <TYPE>
-                             <BODY>
+         <DEFINITION> ::= "function" <IDENTIFIER> <MAKE-IDENTIFIER> "(" <PARAMETER-LIST> <MAKE-PARAMETER-LIST> ")" ":" <TYPE>
+                             <BODY> <MAKE-DEFINITION>
 
      <PARAMETER-LIST> ::= ε
                         | <FORMAL-PARAMETERS>
@@ -31,48 +31,48 @@
   <FORMAL-PARAMETERS-REST> ::= "," <ID-WITH-TYPE> <FORMAL-PARAMETERS-REST>
                              | ε
 
-       <ID-WITH-TYPE> ::= <IDENTIFIER> ":" <TYPE>
+       <ID-WITH-TYPE> ::= <IDENTIFIER> <MAKE-IDENTIFIER> ":" <TYPE> <MAKE-ID-WITH-TYPE>
 
-               <TYPE> ::= "integer"
-                        | "boolean"
+               <TYPE> ::= "integer" <MAKE-INTEGER-TYPE>
+                        | "boolean" <MAKE-BOOLEAN-TYPE>
 
                <BODY> ::= <PRINT-EXPRESSION> <BODY>
-                        | <EXPRESSION>
+                        | <EXPRESSION> <MAKE-BODY>
 
-   <PRINT-EXPRESSION> ::= "print" "(" <EXPRESSION> ")"
+   <PRINT-EXPRESSION> ::= "print" <MAKE-IDENTIFIER> "(" <EXPRESSION> ")" <MAKE-FUNCTION-CALL-EXPRESSION>
 
          // Changed expression by first eliminating left recursion, then left factoring out "EXPRESSION-REST"
          <EXPRESSION> ::= <SIMPLE-EXPRESSION> <EXPRESSION-REST>
          
-    <EXPRESSION-REST> ::= "=" <SIMPLE-EXPRESSION> <EXPRESSION-REST>
-                        | "<" <SIMPLE-EXPRESSION> <EXPRESSION-REST>
+    <EXPRESSION-REST> ::= "=" <SIMPLE-EXPRESSION> <MAKE-EQUALS-EXPRESSION> <EXPRESSION-REST>
+                        | "<" <SIMPLE-EXPRESSION> <MAKE-LESS-THAN-EXPRESSION> <EXPRESSION-REST>
                         | ε
 
   // Changed simple expression and factored out "SIMPLE-EXPRESSION-REST"
   <SIMPLE-EXPRESSION> ::= <TERM> <SIMPLE-EXPRESSION-REST>
 
-    <SIMPLE-EXPRESSION-REST> ::= "or" <TERM> <SIMPLE-EXPRESSION-REST>
-                               | "+" <TERM> <SIMPLE-EXPRESSION-REST>
-                               | "-" <TERM> <SIMPLE-EXPRESSION-REST>
+    <SIMPLE-EXPRESSION-REST> ::= "or" <TERM> <MAKE-OR-EXPRESSION> <SIMPLE-EXPRESSION-REST>
+                               | "+" <TERM> <MAKE-PLUS-EXPRESSION> <SIMPLE-EXPRESSION-REST>
+                               | "-" <TERM> <MAKE-MINUS-EXPRESSION> <SIMPLE-EXPRESSION-REST>
                                | ε
 
                // Changed term by rewriting to eliminate left recursion and then left factoring by adding TERM-REST
                <TERM> ::= <FACTOR> <TERM-REST>
         
-        <TERM-REST> ::= "*" <FACTOR> <TERM-REST>
-                      | "/" <FACTOR> <TERM-REST>
-                      | "and" <FACTOR> <TERM-REST>
+        <TERM-REST> ::= "*" <FACTOR> <MAKE-TIMES-EXPRESSION> <TERM-REST>
+                      | "/" <FACTOR> <MAKE-DIVIDE-EXPRESSION> <TERM-REST>
+                      | "and" <FACTOR> <MAKE-AND-EXPRESSION> <TERM-REST>
                       | ε
 
              // Changed factor to eliminate ambiguity on "IDENTIFIER" token by adding "FACTOR-REST" when IDENTIFIER is encountered
              <FACTOR> ::= <LITERAL>
-                        | "not" <FACTOR>
-                        | "-" <FACTOR>
-                        | <IDENTIFIER> <FACTOR-REST> 
-                        | "if" <EXPRESSION> "then" <EXPRESSION> "else" <EXPRESSION>
+                        | "not" <FACTOR> <MAKE-NOT-EXPRESSION>
+                        | "-" <FACTOR> <MAKE-UNARY-MINUS-EXPRESSION>
+                        | <IDENTIFIER> <MAKE-IDENTIFIER> <FACTOR-REST> 
+                        | "if" <EXPRESSION> "then" <EXPRESSION> "else" <EXPRESSION> <MAKE-IF-EXPRESSION>
                         | "(" <EXPRESSION> ")"
                 
-        <FACTOR-REST> ::= "(" <ARGUMENT-LIST> ")"
+        <FACTOR-REST> ::= "(" <ARGUMENT-LIST> <MAKE-ARGUMENT-LIST> ")" <MAKE-FUNCTION-CALL-EXPRESSION>
                         | ε
 
       <ARGUMENT-LIST> ::= ε
@@ -84,5 +84,5 @@
 <FORMAL-ARGUMENTS-REST> ::= "," <EXPRESSION> <FORMAL-ARGUMENTS-REST>
                           | ε
 
-            <LITERAL> ::= <INTEGER-LITERAL>
-                        | <BOOLEAN-LITERAL>
+            <LITERAL> ::= <INTEGER-LITERAL> <MAKE-INTEGER-LITERAL>
+                        | <BOOLEAN-LITERAL> <MAKE-BOOLEAN-LITERAL>

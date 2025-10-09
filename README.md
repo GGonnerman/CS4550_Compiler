@@ -31,6 +31,7 @@ Produced by the **Compile Squad**
 - `doc/klein-specification.txt`: Categorization of klein features with regular expressions and link to FSM files. Additionally contains a few notes on implementation
 - `doc/refactored-grammer.txt`: The klein grammar with specific refactoring to make generating first/follow sets easier. All changes are described with comments
 - `doc/first-and-follow-sets.md`: A listing of all first and follow sets displayed in seperate markdown tables
+- `doc/ast-nodes.txt`: A listing of all ast nodes created for the klein language
 
 #### Project Files
 
