@@ -13,6 +13,7 @@
 // SIMPLE-EXPRESSION-REST
 // TERM-REST
 // FORMAL-ARGUMENTS-REST
+// Added Semantic actions throughout
  
             <PROGRAM> ::= <DEFINITION-LIST> <MAKE-DEFINITION-LIST> <MAKE-PROGRAM>
 
