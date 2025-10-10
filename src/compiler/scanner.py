@@ -33,6 +33,12 @@ class Scanner:
         self.working_position: Position = Position()
         self.accum: str = ""
 
+    def get_line(self, idx: int):
+        lines: list[str] = self.program.split("\n")
+        if idx < 0 or idx >= len(lines):
+            raise IndexError(f"Cannot access line number {idx}: outside of program")
+        return lines[idx]
+
     def __iter__(self):
         while self.has_next():
             yield self.next()

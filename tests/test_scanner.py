@@ -217,6 +217,25 @@ def test_whitespace_ignored():
     )
 
 
+def test_scanner_get_lines():
+    s = Scanner("(* newline in \n comment*)function \n (1, 2\n)3\n")
+    assert s.get_line(0) == "(* newline in "
+    assert s.get_line(1) == " comment*)function "
+    assert s.get_line(2) == " (1, 2"
+    assert s.get_line(3) == ")3"
+    assert s.get_line(4) == ""
+
+
+def test_scanner_raises_invalid_get_lines():
+    s = Scanner("(* newline in \n comment*)function \n (1, 2\n)3\n")
+    with pytest.raises(IndexError) as excinfo:
+        _ = s.get_line(-1)
+    assert str(excinfo.value) == "Cannot access line number -1: outside of program"
+    with pytest.raises(IndexError) as excinfo:
+        _ = s.get_line(5)
+    assert str(excinfo.value) == "Cannot access line number 5: outside of program"
+
+
 def test_comments_ignored():
     s = Scanner(
         "(* this is a long\t\n\rmultiine comment that 012 contains in&!@^#valid identifiers * ) (* and more *)",
