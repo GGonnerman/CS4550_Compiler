@@ -10,7 +10,7 @@ def position() -> Position:
 
 class TestPosition:
     def test_init(self, position: Position):
-        assert position.get_position() == 0, "Position should start at 0"
+        assert position.get_position() == 1, "Position should start at 1"
         assert position.get_absolute_position() == 0, (
             "Absolute position should start at 0"
         )
@@ -18,7 +18,7 @@ class TestPosition:
 
     def test_increment(self, position: Position):
         position += 1
-        assert position.get_position() == 1, "Position should become 1 after increment"
+        assert position.get_position() == 2, "Position should become 2 after increment"
         assert position.get_absolute_position() == 1, (
             "Absolute position should become 1 after increment"
         )
@@ -27,7 +27,7 @@ class TestPosition:
         )
 
         position += 3
-        assert position.get_position() == 4, (
+        assert position.get_position() == 5, (
             "Position should allow incrementing 3 times"
         )
         assert position.get_absolute_position() == 4, (
@@ -45,8 +45,8 @@ class TestPosition:
         assert position.get_absolute_position() == 1, (
             "Absolute position should not be modified by adding newline"
         )
-        assert position.get_position() == 0, (
-            "Position should be reset when adding newline"
+        assert position.get_position() == 1, (
+            "Position should be reset to 1 when adding newline"
         )
 
     def test_equality(self, position: Position):
@@ -58,3 +58,6 @@ class TestPosition:
         )
         alt += 1
         assert position == alt, "Positions should be equal after both incrementing"
+        position.add_newline()
+        alt.add_newline()
+        assert position == alt, "Positions should be equal after both adding newlines"

@@ -7,7 +7,7 @@ class Position(SupportsIndex):
     def __init__(
         self,
         line_number: int = 1,  # Most people start lines numbers at 1
-        position: int = 0,
+        position: int = 1,  # I guess people also thing the first character is position 1
         absolute_position: int = 0,
     ):
         self._line_number: int = line_number
@@ -53,7 +53,7 @@ class Position(SupportsIndex):
         return self._absolute_position >= other
 
     def add_newline(self):
-        self._position = 0
+        self._position = 1
         self._line_number += 1
 
     def get_line_number(self):
