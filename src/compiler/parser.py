@@ -29,7 +29,11 @@ class Parser:
                 if a == next_token.token_type:
                     continue
                 raise ParseError(
-                    f"Expected {a} and received {next_token.token_type} on {next_token.position}",
+                    f"Expected {a} and received {next_token.token_type}",
+                    position=next_token.position,
+                    original_line=self._scanner.get_line(
+                        next_token.position.get_line_number() - 1,
+                    ),
                 )
             # Know we know a is a NonTerminal
             next_token = self._scanner.peek()
@@ -56,5 +60,9 @@ class Parser:
                     )
 
                 raise ParseError(
-                    f"Invalid transition from {key[0]} to {key[1]} on {next_token.position}. {expected_message}",
+                    f"Invalid transition from {key[0]} to {key[1]}.\n{expected_message}",
+                    position=next_token.position,
+                    original_line=self._scanner.get_line(
+                        next_token.position.get_line_number() - 1,
+                    ),
                 )
