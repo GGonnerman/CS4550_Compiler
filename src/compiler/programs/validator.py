@@ -12,7 +12,7 @@ def validate_klein_program():
 
     try:
         ast = parser.parse()
-        print(ast)
+        print("valid program")
     except LexicalError as e:
         print(e)
     except ParseError as e:

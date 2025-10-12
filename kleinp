@@ -1,0 +1,4 @@
+#!/bin/bash
+
+PROGRAM_CONTENT=$(cat $1)
+./.venv/bin/klein_print_ast "$PROGRAM_CONTENT"
