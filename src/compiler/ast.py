@@ -220,8 +220,7 @@ class AndExpression(Expression):
 
 class NotExpression(Expression):
     def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        self.right_side: Expression = self.validate(semantic_stack.pop(), Expression)
-        self.left_side: Expression = self.validate(semantic_stack.pop(), Expression)
+        self.value: Expression = self.validate(semantic_stack.pop(), Expression)
 
 
 class UnaryMinusExpression(Expression):
