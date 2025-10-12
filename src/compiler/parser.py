@@ -1,4 +1,4 @@
-from compiler.ast import SemanticAction, SemanticStack, action_to_astnode
+from compiler.ast import ASTNode, SemanticAction, SemanticStack, action_to_astnode
 from compiler.klein_errors import ParseError
 from compiler.parse_table import NonTerminal, generate_parse_table
 from compiler.scanner import Scanner
@@ -30,7 +30,7 @@ class Parser:
             )
         return expected_message
 
-    def parse(self) -> None:
+    def parse(self) -> ASTNode:
         stack: list[NonTerminal | TokenType | SemanticAction] = [
             TokenType.END_OF_FILE,
             NonTerminal.PROGRAM,
@@ -77,3 +77,15 @@ class Parser:
                 raise ParseError(
                     f"Unexpected value on stack: Received {next_stack_item} of type {next_stack_item.__class__.__name__}",
                 )
+
+        if len(stack) != 0:
+            raise ParseError(
+                f"Expected stack to be empty when done parsing. Instead encountered ({len(stack)}): {stack}",
+            )
+
+        if len(semantic_stack) != 1:
+            raise ParseError(
+                f"Expected 1 value in semantic stack when done parsing. Instead encountered ({len(semantic_stack)}): {semantic_stack}",
+            )
+
+        return semantic_stack.pop()

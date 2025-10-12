@@ -3,6 +3,8 @@ from collections.abc import Callable
 from enum import StrEnum, auto
 from typing import TypeVar
 
+from typing_extensions import override
+
 from compiler.tokens import Token, TokenType
 
 T = TypeVar("T")
@@ -19,7 +21,6 @@ class SemanticStack:
         if isinstance(top_node, desired_type):
             _ = self.pop()
             return top_node
-        print(f"pop_if found wrong type: {top_node} expected {desired_type}")
         return None
 
     def push(self, node: "ASTNode") -> None:
@@ -34,6 +35,10 @@ class SemanticStack:
     def is_empty(self) -> int:
         return len(self._stack) == 0
 
+    def __len__(self) -> int:
+        return len(self._stack)
+
+    @override
     def __str__(self) -> str:
         return ",".join([str(x) for x in self._stack])
 
@@ -237,7 +242,6 @@ class IfExpression(Expression):
 
 class FunctionCallExpression(Expression):
     def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        print(semantic_stack)
         self.argument_list: ArgumentList = self.validate(
             semantic_stack.pop(),
             ArgumentList,

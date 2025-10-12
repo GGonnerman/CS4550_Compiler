@@ -11,8 +11,8 @@ def validate_klein_program():
     parser = Parser(scanner)
 
     try:
-        parser.parse()
-        print("valid program")
+        ast = parser.parse()
+        print(ast)
     except LexicalError as e:
         print(e)
     except ParseError as e:

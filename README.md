@@ -43,6 +43,7 @@ Produced by the **Compile Squad**
 - `kleinf`: a bash script to allow validating any klein program
 - `CS4550_Compiler.code-workspace` and `.vscode`: We all use vscode, so these files help our configurations to stay in sync.
 - `.ruff.toml`: configurations for ruff (python linter and formatter) to help standardize code
+- `programs/`: a variety of programs (some functional and some intentionally non-functional) written in the klein language
 
 #### Test Files
 
