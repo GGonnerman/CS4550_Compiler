@@ -28,7 +28,7 @@ lessThanExpression
 orExpression
 - left_side: expression
 - right_side: expression
-add_expression
+plusExpression
 - left_side: expression
 - right_side: expression
 minusExpression
@@ -51,11 +51,13 @@ ifexpression
 - if: expression
 - then: expression
 - else: expression
-function_call
+functionCallExpression
 - function_name: identifier
-- arguments: argument_list
+- argument_list: argument_list
 argument_list
-- arguments: expression[]
+- arguments: argument[]
+argument
+- value: expression
 Literal
 IntegerLiteral
 - value: string? integer?
@@ -63,4 +65,4 @@ BooleanLiteral
 - value: string? boolean?
 
 identifier
-- value: string?
+- value: string

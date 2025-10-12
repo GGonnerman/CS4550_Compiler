@@ -40,7 +40,7 @@
                <BODY> ::= <PRINT-EXPRESSION> <BODY>
                         | <EXPRESSION> <MAKE-BODY>
 
-   <PRINT-EXPRESSION> ::= "print" <MAKE-IDENTIFIER> "(" <EXPRESSION> ")" <MAKE-FUNCTION-CALL-EXPRESSION>
+   <PRINT-EXPRESSION> ::= "print" <MAKE-IDENTIFIER> "(" <EXPRESSION> <MAKE-ARGUMENT> <MAKE-ARGUMENT-LIST> ")" <MAKE-FUNCTION-CALL-EXPRESSION>
 
          // Changed expression by first eliminating left recursion, then left factoring out "EXPRESSION-REST"
          <EXPRESSION> ::= <SIMPLE-EXPRESSION> <EXPRESSION-REST>
@@ -80,9 +80,9 @@
                         | <FORMAL-ARGUMENTS>
 
    // Changed formal arguments to eliminate ambiguity when EXPRESSION is encountered by adding FORMAL-ARGUMENTS-REST
-   <FORMAL-ARGUMENTS> ::= <EXPRESSION> <FORMAL-ARGUMENTS-REST>
+   <FORMAL-ARGUMENTS> ::= <EXPRESSION> <MAKE-ARGUMENT> <FORMAL-ARGUMENTS-REST>
   
-<FORMAL-ARGUMENTS-REST> ::= "," <EXPRESSION> <FORMAL-ARGUMENTS-REST>
+<FORMAL-ARGUMENTS-REST> ::= "," <EXPRESSION> <MAKE-ARGUMENT> <FORMAL-ARGUMENTS-REST>
                           | ε
 
             <LITERAL> ::= <INTEGER-LITERAL> <MAKE-INTEGER-LITERAL>
