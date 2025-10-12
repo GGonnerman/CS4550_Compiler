@@ -4,6 +4,7 @@ from io import TextIOWrapper
 
 from typing_extensions import override
 
+from compiler.ast import SemanticAction
 from compiler.tokens import TokenType
 
 
@@ -55,17 +56,19 @@ def read_csv_to_table(filename: str) -> list[list[str]]:
 
 # TODO: In theory here we could have allow creating custom "error values" which
 # would be parsed from cells within the original spreadsheet
-def parse_cell(cell: str) -> list[NonTerminal | TokenType]:
+def parse_cell(cell: str) -> list[NonTerminal | TokenType | SemanticAction]:
     # None is episilon so there would be nothing returned in that case
     if cell == "None":
         return []
 
-    out: list[NonTerminal | TokenType] = []
+    out: list[NonTerminal | TokenType | SemanticAction] = []
     for raw_value in cell.split(" "):
         if raw_value in NonTerminal._value2member_map_:
             out.append(NonTerminal(raw_value))
         elif raw_value in TokenType._value2member_map_:
             out.append(TokenType(raw_value))
+        elif raw_value in SemanticAction._value2member_map_:
+            out.append(SemanticAction(raw_value))
         else:
             raise ValueError(
                 f'Found invalid value in cell "{cell}", specifically "{raw_value}"',
@@ -77,7 +80,7 @@ def parse_cell(cell: str) -> list[NonTerminal | TokenType]:
 def process_table_into_parsetable(table: list[list[str]]):
     parse_table: dict[
         tuple[NonTerminal, TokenType],
-        list[NonTerminal | TokenType],
+        list[NonTerminal | TokenType | SemanticAction],
     ] = {}
     header_row: list[str] = table.pop(0)[1:]
     headers: list[TokenType] = [TokenType(header) for header in header_row]
