@@ -1,0 +1,15 @@
+function adjust_1(num1: integer, denom2: integer): integer
+    num1*denom2
+function adjust_2(num2: integer, denom1: integer): integer
+    num2*denom1
+
+function denom_calc(denom1: integer, denom2: integer): integer
+    denom1*denom2
+
+function fraction_print(num1: integer, num2: integer, denom: integer): integer
+    print(num1+num2)
+    print(denom)
+    denom
+
+function main(num1: integer, denom1: integer, num2: integer, denom2: integer): integer
+    fraction_print(adjust_1(num1,denom2), adjust_2(num2,denom1),denom_calc(denom1,denom2))
