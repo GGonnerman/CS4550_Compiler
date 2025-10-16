@@ -283,11 +283,19 @@ class IntegerLiteral(Literal):
         self._token: Token = self.ensure_token(most_recent_token)
         self.value: str = self.get_token_value(self._token)
 
+    @override
+    def __str__(self):
+        return f"IntegerLiteral {self.value}"
+
 
 class BooleanLiteral(Literal):
     def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
         self._token: Token = self.ensure_token(most_recent_token)
         self.value: str = self.get_token_value(self._token)
+
+    @override
+    def __str__(self):
+        return f"BooleanLiteral {self.value}"
 
 
 class Identifier(Expression):
@@ -299,8 +307,9 @@ class Identifier(Expression):
         else:
             self.value = self.get_token_value(self._token)
 
+    @override
     def __str__(self):
-        return f"{self.value}"
+        return f"Identifier {self.value}"
 
 
 action_to_astnode: dict[
@@ -346,7 +355,7 @@ def display_astnode(node: ASTNode, indent: int = 0, spacer: str = "  "):
             display_astnode(definition, indent, spacer)
     elif isinstance(node, Definition):
         print(f"{main_indent}{node}")
-        print(f"{sub_indent}name {node.name}")
+        print(f"{sub_indent}name {node.name.value}")
         print(f"{sub_indent}parameters")
         display_astnode(node.parameters, indent + 2, spacer)
         print(f"{sub_indent}returns {node.return_type}")
@@ -356,14 +365,14 @@ def display_astnode(node: ASTNode, indent: int = 0, spacer: str = "  "):
         for parameter in node.definitions:
             display_astnode(parameter, indent, spacer)
     elif isinstance(node, IdWithType):
-        print(f"{main_indent}{node.type} {node.name}")
+        print(f"{main_indent}{node.type} {node.name.value}")
     elif isinstance(node, Body):
         for print_stm in node.print_expressions:
             display_astnode(print_stm, indent, spacer)
         display_astnode(node.body, indent, spacer)
     elif isinstance(node, FunctionCallExpression):
         print(f"{main_indent}function call")
-        print(f"{sub_indent}name {node.function_name}")
+        print(f"{sub_indent}name {node.function_name.value}")
         display_astnode(node.argument_list, indent + 1, spacer)
     elif isinstance(node, ArgumentList):
         if len(node.arguments) == 0:
@@ -392,10 +401,16 @@ def display_astnode(node: ASTNode, indent: int = 0, spacer: str = "  "):
         else:
             print(f"{sub_indent}value")
             display_astnode(node.value, indent + 2, spacer)
-    elif isinstance(node, (IntegerLiteral, BooleanLiteral)):
-        print(f"{main_indent}{node} {node.value}")
-    elif isinstance(node, Identifier):
-        print(f"{main_indent}{node.value}")
+    elif isinstance(node, (Identifier, Literal)):
+        print(f"{main_indent}{node}")
+    elif isinstance(node, IfExpression):
+        print(f"{main_indent}{node}")
+        print(f"{sub_indent}condition")
+        display_astnode(node.condition, indent + 2, spacer)
+        print(f"{sub_indent}consequent")
+        display_astnode(node.consequent, indent + 2, spacer)
+        print(f"{sub_indent}alternative")
+        display_astnode(node.alternative, indent + 2, spacer)
     else:
         raise NotImplementedError(f"Node of type {node} has not yet been implemented")
 
@@ -425,10 +440,8 @@ def _astnode_to_dot(node: ASTNode):
             link(node, definition)
     elif isinstance(node, Definition):
         print(
-            f'{key} [label = "{node}\nname: {node.name}\nreturns {node.return_type}"]',
+            f'{key} [label = "{node}\nname: {node.name.value}\nreturns {node.return_type}"]',
         )
-        # link(node, node.name, "name")
-
         link(node, node.parameters, "parameters")
         link(node, node.body, "body")
     elif isinstance(node, ParameterList):
@@ -436,7 +449,7 @@ def _astnode_to_dot(node: ASTNode):
         for parameter in node.definitions:
             link(node, parameter)
     elif isinstance(node, IdWithType):
-        print(f'{key} [label = "name {node.name}\ntype {node.type}"]')
+        print(f'{key} [label = "name {node.name.value}\ntype {node.type}"]')
     elif isinstance(node, Body):
         print(f'{key} [label = "{node}"]')
         for print_expression in node.print_expressions:
@@ -450,7 +463,7 @@ def _astnode_to_dot(node: ASTNode):
         print(f'{key} [label = "{node}"]')
         link(node, node.value)
     elif isinstance(node, FunctionCallExpression):
-        print(f'{key} [label = "{node}\n{node.function_name}"]')
+        print(f'{key} [label = "{node}\n{node.function_name.value}"]')
         link(node, node.argument_list)
     elif isinstance(node, ArgumentList):
         print(f'{key} [label = "{node}"]')
@@ -464,8 +477,7 @@ def _astnode_to_dot(node: ASTNode):
         link(node, node.condition, "condition")
         link(node, node.consequent, "consequent")
         link(node, node.alternative, "alternative")
-    elif isinstance(node, (Identifier, IntegerLiteral, BooleanLiteral)):
-        # TODO: Check if this seems right
+    elif isinstance(node, (Identifier, Literal)):
         print(f'{key} [label = "{node}"]')
     else:
-        return
+        raise NotImplementedError(f"Node of type {node} has not yet been implemented")
