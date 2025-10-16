@@ -1,5 +1,6 @@
 import sys
 
+from compiler.ast import display_astnode
 from compiler.klein_errors import LexicalError, ParseError
 from compiler.parser import Parser
 from compiler.scanner import Scanner
@@ -12,13 +13,15 @@ def print_klein_ast():
 
     try:
         ast = parser.parse()
-        print(ast)
+        # display_astnode(ast)
+        # astnode_to_dot(ast)
+        display_astnode(ast)
     except LexicalError as e:
         print(e)
     except ParseError as e:
         print(e)
-    except Exception:
-        print("Klein Error: unable to continue processing")
+    # except Exception:
+    #    print("Klein Error: unable to continue processing")
 
 
 if __name__ == "__main__":
