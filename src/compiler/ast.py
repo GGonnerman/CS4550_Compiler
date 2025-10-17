@@ -1,5 +1,6 @@
+import random
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from enum import StrEnum, auto
 from typing import Self, TypeVar
 
@@ -76,6 +77,23 @@ class ASTNode(ABC):
     def __str__(self) -> str:
         return self.__class__.__name__
 
+    @override
+    def __eq__(self, other: object) -> bool:
+        if self.__class__ != other.__class__:
+            return False
+        return {key: val for key, val in self.__dict__.items() if key != "_hash"} == {  # pyright: ignore[reportAny]
+            key: val
+            for key, val in other.__dict__.items()  # pyright: ignore[reportAny]
+            if key != "_hash"
+        }
+
+    def __init__(self):
+        self._hash: int = random.getrandbits(128)
+
+    @override
+    def __hash__(self):
+        return self._hash
+
     @classmethod
     def get_token_value(cls, token: Token | None) -> str:
         if token is None:
@@ -108,6 +126,7 @@ class ASTNode(ABC):
 
 class Program(ASTNode):
     def __init__(self, definition_list: "DefinitionList"):
+        super().__init__()
         self.definition_list: DefinitionList = definition_list
 
     @override
@@ -125,8 +144,9 @@ class Program(ASTNode):
 
 
 class DefinitionList(ASTNode):
-    def __init__(self, definitions: list["Definition"]):
-        self.definitions: list[Definition] = definitions
+    def __init__(self, definitions: Iterable["Definition"]):
+        super().__init__()
+        self.definitions: tuple[Definition, ...] = tuple(definitions)
 
     @override
     @classmethod
@@ -153,6 +173,7 @@ class Definition(ASTNode):
         return_type: "Type",
         body: "Body",
     ):
+        super().__init__()
         self.name: Identifier = name
         self.parameters: ParameterList = parameters
         self.return_type: Type = return_type
@@ -176,8 +197,9 @@ class Definition(ASTNode):
 
 
 class ParameterList(ASTNode):
-    def __init__(self, definitions: list["IdWithType"]):
-        self.definitions: list[IdWithType] = definitions
+    def __init__(self, definitions: Iterable["IdWithType"]):
+        super().__init__()
+        self.definitions: tuple[IdWithType, ...] = tuple(definitions)
 
     @override
     @classmethod
@@ -199,10 +221,13 @@ class ParameterList(ASTNode):
 class Body(ASTNode):
     def __init__(
         self,
-        print_expressions: list["FunctionCallExpression"],
+        print_expressions: Iterable["FunctionCallExpression"],
         body: "Expression",
     ):
-        self.print_expressions: list[FunctionCallExpression] = print_expressions
+        super().__init__()
+        self.print_expressions: tuple[FunctionCallExpression, ...] = tuple(
+            print_expressions,
+        )
         self.body: Expression = body
 
     @override
@@ -225,6 +250,7 @@ class Body(ASTNode):
 
 class IdWithType(ASTNode):
     def __init__(self, name: "Identifier", type_node: "Type"):
+        super().__init__()
         self.name: Identifier = name
         self.type: Type = type_node
 
@@ -246,7 +272,7 @@ class Type(ASTNode, ABC):
 
 class IntegerType(Type):
     def __init__(self):
-        pass
+        super().__init__()
 
     @override
     @classmethod
@@ -264,7 +290,7 @@ class IntegerType(Type):
 
 class BooleanType(Type):
     def __init__(self):
-        pass
+        super().__init__()
 
     @override
     @classmethod
@@ -286,6 +312,7 @@ class Expression(ASTNode, ABC):
 
 class UnaryExpression(Expression, ABC):
     def __init__(self, value: Expression):
+        super().__init__()
         self.value: Expression = value
 
     @override
@@ -301,6 +328,7 @@ class UnaryExpression(Expression, ABC):
 
 class BinaryExpression(Expression, ABC):
     def __init__(self, left_side: Expression, right_side: Expression):
+        super().__init__()
         self.left_side: Expression = left_side
         self.right_side: Expression = right_side
 
@@ -373,6 +401,7 @@ class IfExpression(Expression):
         consequent: Expression,
         alternative: Expression,
     ):
+        super().__init__()
         self.condition: Expression = condition
         self.consequent: Expression = consequent
         self.alternative: Expression = alternative
@@ -384,14 +413,15 @@ class IfExpression(Expression):
         semantic_stack: SemanticStack,
         most_recent_token: Token | None,
     ) -> "IfExpression":
-        condition: Expression = cls.validate(semantic_stack.pop(), Expression)
-        consequent: Expression = cls.validate(semantic_stack.pop(), Expression)
         alternative: Expression = cls.validate(semantic_stack.pop(), Expression)
+        consequent: Expression = cls.validate(semantic_stack.pop(), Expression)
+        condition: Expression = cls.validate(semantic_stack.pop(), Expression)
         return IfExpression(condition, consequent, alternative)
 
 
 class FunctionCallExpression(Expression):
     def __init__(self, function_name: "Identifier", argument_list: "ArgumentList"):
+        super().__init__()
         self.function_name: Identifier = function_name
         self.argument_list: ArgumentList = argument_list
 
@@ -411,8 +441,9 @@ class FunctionCallExpression(Expression):
 
 
 class ArgumentList(ASTNode):
-    def __init__(self, arguments: list["Argument"]):
-        self.arguments: list[Argument] = arguments
+    def __init__(self, arguments: Iterable["Argument"]):
+        super().__init__()
+        self.arguments: tuple[Argument, ...] = tuple(arguments)
 
     @override
     @classmethod
@@ -433,6 +464,7 @@ class ArgumentList(ASTNode):
 
 class Argument(ASTNode):
     def __init__(self, value: Expression):
+        super().__init__()
         self.value: Expression = value
 
     @override
@@ -448,6 +480,7 @@ class Argument(ASTNode):
 
 class Literal(Expression, ABC):
     def __init__(self, value: str):
+        super().__init__()
         self.value: str = value
 
     @override
@@ -475,6 +508,7 @@ class BooleanLiteral(Literal):
 
 class Identifier(Expression):
     def __init__(self, value: str):
+        super().__init__()
         self.value: str = value
 
     @override
