@@ -24,6 +24,23 @@ KEYWORDS: dict[str, TokenType] = {
 }
 BOOLEANS: set[str] = {"true", "false"}
 
+TOKEN_TO_DISPLAY_CHAR: dict[TokenType, str] = {
+    TokenType.LEFT_PAREN: "(",
+    TokenType.RIGHT_PAREN: ")",
+    TokenType.COMMA: ",",
+    TokenType.COLON: ":",
+    TokenType.PLUS: "+",
+    TokenType.MINUS: "-",
+    TokenType.TIMES: "*",
+    TokenType.DIVIDE: "/",
+    TokenType.LESS_THAN: "<",
+    TokenType.EQUAL: "=",
+}
+
+TOKEN_TO_DISPLAY_CHAR.update(
+    [(v, k) for k, v in KEYWORDS.items()],
+)
+
 
 class Scanner:
     def __init__(self, program: str):
