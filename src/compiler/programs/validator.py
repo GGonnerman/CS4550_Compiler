@@ -11,13 +11,13 @@ def validate_klein_program():
     parser = Parser(scanner)
 
     try:
-        ast = parser.parse()
+        _ = parser.parse()
         print("valid program")
     except LexicalError as e:
         print(e)
     except ParseError as e:
         print(e)
-    except Exception:
+    except Exception:  # noqa: BLE001
         print("Klein Error: unable to continue processing")
 
 

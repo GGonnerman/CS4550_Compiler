@@ -69,12 +69,12 @@ class Parser:
                     raise ParseError(
                         f"Invalid transition from {key[0]} to {key[1]} on {next_token.position}. {expected_message}",
                     )
-            elif isinstance(next_stack_item, SemanticAction):
+            elif isinstance(next_stack_item, SemanticAction):  # pyright: ignore[reportUnnecessaryIsInstance]
                 action = action_to_astnode[next_stack_item]
                 astnode = action(semantic_stack, most_recent_token)
                 semantic_stack.push(astnode)
             else:
-                raise ParseError(
+                raise ParseError(  # pyright: ignore[reportUnreachable]
                     f"Unexpected value on stack: Received {next_stack_item} of type {next_stack_item.__class__.__name__}",
                 )
 

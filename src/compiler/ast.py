@@ -1,7 +1,7 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from collections.abc import Callable
 from enum import StrEnum, auto
-from typing import TypeVar
+from typing import Self, TypeVar
 
 from typing_extensions import override
 
@@ -71,90 +71,173 @@ class SemanticAction(StrEnum):
     MAKE_BOOLEAN_LITERAL = auto()
 
 
-class ASTNode(ABC):  # noqa: B024
-    def validate(self, node: "ASTNode", desired_type: type[T]) -> T:
-        if not isinstance(node, desired_type):
-            raise TypeError(
-                f"Expected {node} to be type {desired_type.__name__} instead found {node.__class__.__name__}",  # noqa: E501
-            )
-        return node
-
-    def ensure_token(self, token: Token | None) -> Token:
-        if token is None:
-            raise ValueError(
-                f"No most recent token found when generating {self.__class__.__name__}",
-            )
-        return token
-
+class ASTNode(ABC):
+    @override
     def __str__(self) -> str:
         return self.__class__.__name__
 
-    def get_token_value(self, token: Token) -> str:
+    @classmethod
+    def get_token_value(cls, token: Token | None) -> str:
+        if token is None:
+            raise ValueError(
+                f"No most recent token found when generating {cls.__name__}",
+            )
         value = token.value()
         if value is None:
             raise ValueError(
-                f"Most recent token missing value found when generating {self.__class__.__name__}: {token}",
+                f"Most recent token missing value found when generating {cls.__name__}: {token}",
             )
         return value
 
+    @classmethod
+    def validate(cls, node: "ASTNode", desired_type: type[T]) -> T:
+        if not isinstance(node, desired_type):
+            raise TypeError(
+                f"Expected {node} to be type {desired_type.__name__} instead found {node.__class__.__name__}",
+            )
+        return node
+
+    @classmethod
+    @abstractmethod
+    def build(
+        cls,
+        semantic_stack: SemanticStack,
+        most_recent_token: Token | None,
+    ) -> Self: ...
+
 
 class Program(ASTNode):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        self.definition_list: DefinitionList = self.validate(
+    def __init__(self, definition_list: "DefinitionList"):
+        self.definition_list: DefinitionList = definition_list
+
+    @override
+    @classmethod
+    def build(
+        cls,
+        semantic_stack: "SemanticStack",
+        most_recent_token: Token | None,
+    ) -> "Program":
+        definition_list: DefinitionList = cls.validate(
             semantic_stack.pop(),
             DefinitionList,
         )
+        return Program(definition_list)
 
 
 class DefinitionList(ASTNode):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        self.definitions: list[Definition] = []
+    def __init__(self, definitions: list["Definition"]):
+        self.definitions: list[Definition] = definitions
+
+    @override
+    @classmethod
+    def build(
+        cls,
+        semantic_stack: SemanticStack,
+        most_recent_token: Token | None,
+    ) -> "DefinitionList":
+        definitions: list[Definition] = []
         while not semantic_stack.is_empty():
             next_node = semantic_stack.pop_if(Definition)
             if next_node:
-                self.definitions.insert(0, next_node)
+                definitions.insert(0, next_node)
             else:
                 break
+        return DefinitionList(definitions)
 
 
 class Definition(ASTNode):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        self.body: Body = self.validate(semantic_stack.pop(), Body)
-        self.return_type: Type = self.validate(semantic_stack.pop(), Type)
-        self.parameters: ParameterList = self.validate(
+    def __init__(
+        self,
+        name: "Identifier",
+        parameters: "ParameterList",
+        return_type: "Type",
+        body: "Body",
+    ):
+        self.name: Identifier = name
+        self.parameters: ParameterList = parameters
+        self.return_type: Type = return_type
+        self.body: Body = body
+
+    @override
+    @classmethod
+    def build(
+        cls,
+        semantic_stack: SemanticStack,
+        most_recent_token: Token | None,
+    ) -> "Definition":
+        body: Body = cls.validate(semantic_stack.pop(), Body)
+        return_type: Type = cls.validate(semantic_stack.pop(), Type)
+        parameters: ParameterList = cls.validate(
             semantic_stack.pop(),
             ParameterList,
         )
-        self.name: Identifier = self.validate(semantic_stack.pop(), Identifier)
+        name: Identifier = cls.validate(semantic_stack.pop(), Identifier)
+        return Definition(name, parameters, return_type, body)
 
 
 class ParameterList(ASTNode):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        self.definitions: list[IdWithType] = []
+    def __init__(self, definitions: list["IdWithType"]):
+        self.definitions: list[IdWithType] = definitions
+
+    @override
+    @classmethod
+    def build(
+        cls,
+        semantic_stack: SemanticStack,
+        most_recent_token: Token | None,
+    ) -> "ParameterList":
+        definitions: list[IdWithType] = []
         while not semantic_stack.is_empty():
             next_node = semantic_stack.pop_if(IdWithType)
             if next_node:
-                self.definitions.insert(0, next_node)
+                definitions.insert(0, next_node)
             else:
                 break
+        return ParameterList(definitions)
 
 
 class Body(ASTNode):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        self.body: Expression = self.validate(semantic_stack.pop(), Expression)
-        self.print_expressions: list[FunctionCallExpression] = []
+    def __init__(
+        self,
+        print_expressions: list["FunctionCallExpression"],
+        body: "Expression",
+    ):
+        self.print_expressions: list[FunctionCallExpression] = print_expressions
+        self.body: Expression = body
+
+    @override
+    @classmethod
+    def build(
+        cls,
+        semantic_stack: SemanticStack,
+        most_recent_token: Token | None,
+    ) -> "Body":
+        body: Expression = cls.validate(semantic_stack.pop(), Expression)
+        print_expressions: list[FunctionCallExpression] = []
         while not semantic_stack.is_empty():
             next_node = semantic_stack.pop_if(FunctionCallExpression)
             if next_node:
-                self.print_expressions.insert(0, next_node)
+                print_expressions.insert(0, next_node)
             else:
                 break
+        return Body(print_expressions, body)
 
 
 class IdWithType(ASTNode):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        self.type: Type = self.validate(semantic_stack.pop(), Type)
-        self.name: Identifier = self.validate(semantic_stack.pop(), Identifier)
+    def __init__(self, name: "Identifier", type_node: "Type"):
+        self.name: Identifier = name
+        self.type: Type = type_node
+
+    @override
+    @classmethod
+    def build(
+        cls,
+        semantic_stack: SemanticStack,
+        most_recent_token: Token | None,
+    ) -> "IdWithType":
+        type_node: Type = cls.validate(semantic_stack.pop(), Type)
+        name: Identifier = cls.validate(semantic_stack.pop(), Identifier)
+        return IdWithType(name, type_node)
 
 
 class Type(ASTNode, ABC):
@@ -162,17 +245,37 @@ class Type(ASTNode, ABC):
 
 
 class IntegerType(Type):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
+    def __init__(self):
         pass
 
+    @override
+    @classmethod
+    def build(
+        cls,
+        semantic_stack: SemanticStack,
+        most_recent_token: Token | None,
+    ) -> "IntegerType":
+        return IntegerType()
+
+    @override
     def __str__(self):
         return "Integer"
 
 
 class BooleanType(Type):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
+    def __init__(self):
         pass
 
+    @override
+    @classmethod
+    def build(
+        cls,
+        semantic_stack: SemanticStack,
+        most_recent_token: Token | None,
+    ) -> "BooleanType":
+        return BooleanType()
+
+    @override
     def __str__(self):
         return "Boolean"
 
@@ -182,130 +285,214 @@ class Expression(ASTNode, ABC):
 
 
 class UnaryExpression(Expression, ABC):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        self.value: Expression = self.validate(semantic_stack.pop(), Expression)
+    def __init__(self, value: Expression):
+        self.value: Expression = value
+
+    @override
+    @classmethod
+    def build(
+        cls,
+        semantic_stack: SemanticStack,
+        most_recent_token: Token | None,
+    ) -> Self:
+        value: Expression = cls.validate(semantic_stack.pop(), Expression)
+        return cls(value)
 
 
 class BinaryExpression(Expression, ABC):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        self.right_side: Expression = self.validate(semantic_stack.pop(), Expression)
-        self.left_side: Expression = self.validate(semantic_stack.pop(), Expression)
+    def __init__(self, left_side: Expression, right_side: Expression):
+        self.left_side: Expression = left_side
+        self.right_side: Expression = right_side
+
+    @override
+    @classmethod
+    def build(
+        cls,
+        semantic_stack: SemanticStack,
+        most_recent_token: Token | None,
+    ) -> Self:
+        right_side: Expression = cls.validate(semantic_stack.pop(), Expression)
+        left_side: Expression = cls.validate(semantic_stack.pop(), Expression)
+        return cls(left_side, right_side)
 
 
 class EqualsExpression(BinaryExpression):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        super().__init__(semantic_stack, most_recent_token)
+    def __init__(self, left_side: Expression, right_side: Expression):
+        super().__init__(left_side, right_side)
 
 
 class LessThanExpression(BinaryExpression):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        super().__init__(semantic_stack, most_recent_token)
+    def __init__(self, left_side: Expression, right_side: Expression):
+        super().__init__(left_side, right_side)
 
 
 class OrExpression(BinaryExpression):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        super().__init__(semantic_stack, most_recent_token)
+    def __init__(self, left_side: Expression, right_side: Expression):
+        super().__init__(left_side, right_side)
 
 
 class PlusExpression(BinaryExpression):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        super().__init__(semantic_stack, most_recent_token)
+    def __init__(self, left_side: Expression, right_side: Expression):
+        super().__init__(left_side, right_side)
 
 
 class MinusExpression(BinaryExpression):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        super().__init__(semantic_stack, most_recent_token)
+    def __init__(self, left_side: Expression, right_side: Expression):
+        super().__init__(left_side, right_side)
 
 
 class TimesExpression(BinaryExpression):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        super().__init__(semantic_stack, most_recent_token)
+    def __init__(self, left_side: Expression, right_side: Expression):
+        super().__init__(left_side, right_side)
 
 
 class DivideExpression(BinaryExpression):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        super().__init__(semantic_stack, most_recent_token)
+    def __init__(self, left_side: Expression, right_side: Expression):
+        super().__init__(left_side, right_side)
 
 
 class AndExpression(BinaryExpression):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        super().__init__(semantic_stack, most_recent_token)
+    def __init__(self, left_side: Expression, right_side: Expression):
+        super().__init__(left_side, right_side)
 
 
 class NotExpression(UnaryExpression):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        super().__init__(semantic_stack, most_recent_token)
+    def __init__(self, value: Expression):
+        super().__init__(value)
 
 
 class UnaryMinusExpression(UnaryExpression):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        super().__init__(semantic_stack, most_recent_token)
+    def __init__(self, value: Expression):
+        super().__init__(value)
 
 
 class IfExpression(Expression):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        self.condition: Expression = self.validate(semantic_stack.pop(), Expression)
-        self.consequent: Expression = self.validate(semantic_stack.pop(), Expression)
-        self.alternative: Expression = self.validate(semantic_stack.pop(), Expression)
+    def __init__(
+        self,
+        condition: Expression,
+        consequent: Expression,
+        alternative: Expression,
+    ):
+        self.condition: Expression = condition
+        self.consequent: Expression = consequent
+        self.alternative: Expression = alternative
+
+    @override
+    @classmethod
+    def build(
+        cls,
+        semantic_stack: SemanticStack,
+        most_recent_token: Token | None,
+    ) -> "IfExpression":
+        condition: Expression = cls.validate(semantic_stack.pop(), Expression)
+        consequent: Expression = cls.validate(semantic_stack.pop(), Expression)
+        alternative: Expression = cls.validate(semantic_stack.pop(), Expression)
+        return IfExpression(condition, consequent, alternative)
 
 
 class FunctionCallExpression(Expression):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        self.argument_list: ArgumentList = self.validate(
+    def __init__(self, function_name: "Identifier", argument_list: "ArgumentList"):
+        self.function_name: Identifier = function_name
+        self.argument_list: ArgumentList = argument_list
+
+    @override
+    @classmethod
+    def build(
+        cls,
+        semantic_stack: SemanticStack,
+        most_recent_token: Token | None,
+    ) -> "FunctionCallExpression":
+        argument_list: ArgumentList = cls.validate(
             semantic_stack.pop(),
             ArgumentList,
         )
-        self.function_name: Identifier = self.validate(semantic_stack.pop(), Identifier)
+        function_name: Identifier = cls.validate(semantic_stack.pop(), Identifier)
+        return FunctionCallExpression(function_name, argument_list)
 
 
 class ArgumentList(ASTNode):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        self.arguments: list[Argument] = []
+    def __init__(self, arguments: list["Argument"]):
+        self.arguments: list[Argument] = arguments
+
+    @override
+    @classmethod
+    def build(
+        cls,
+        semantic_stack: SemanticStack,
+        most_recent_token: Token | None,
+    ) -> "ArgumentList":
+        arguments: list[Argument] = []
         while not semantic_stack.is_empty():
             next_node = semantic_stack.pop_if(Argument)
             if next_node:
-                self.arguments.insert(0, next_node)
+                arguments.insert(0, next_node)
             else:
                 break
+        return ArgumentList(arguments)
 
 
 class Argument(ASTNode):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        self.value: Expression = self.validate(semantic_stack.pop(), Expression)
+    def __init__(self, value: Expression):
+        self.value: Expression = value
+
+    @override
+    @classmethod
+    def build(
+        cls,
+        semantic_stack: SemanticStack,
+        most_recent_token: Token | None,
+    ) -> Self:
+        value: Expression = cls.validate(semantic_stack.pop(), Expression)
+        return cls(value)
 
 
 class Literal(Expression, ABC):
-    pass
+    def __init__(self, value: str):
+        self.value: str = value
+
+    @override
+    @classmethod
+    def build(
+        cls,
+        semantic_stack: SemanticStack,
+        most_recent_token: Token | None,
+    ) -> Self:
+        value = cls.get_token_value(most_recent_token)
+        return cls(value)
 
 
 class IntegerLiteral(Literal):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        self._token: Token = self.ensure_token(most_recent_token)
-        self.value: str = self.get_token_value(self._token)
-
     @override
     def __str__(self):
         return f"IntegerLiteral {self.value}"
 
 
 class BooleanLiteral(Literal):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        self._token: Token = self.ensure_token(most_recent_token)
-        self.value: str = self.get_token_value(self._token)
-
     @override
     def __str__(self):
         return f"BooleanLiteral {self.value}"
 
 
 class Identifier(Expression):
-    def __init__(self, semantic_stack: SemanticStack, most_recent_token: Token | None):
-        self._token: Token = self.ensure_token(most_recent_token)
-        self.value: str
-        if self._token == TokenType.KEYWORD_PRINT:
-            self.value = "print"
+    def __init__(self, value: str):
+        self.value: str = value
+
+    @override
+    @classmethod
+    def build(
+        cls,
+        semantic_stack: SemanticStack,
+        most_recent_token: Token | None,
+    ) -> "Identifier":
+        if most_recent_token is None:
+            raise ValueError(
+                f"No most recent token found when generating {cls.__name__}",
+            )
+        if most_recent_token == TokenType.KEYWORD_PRINT:
+            value = "print"
         else:
-            self.value = self.get_token_value(self._token)
+            value = cls.get_token_value(most_recent_token)
+        return Identifier(value)
 
     @override
     def __str__(self):
@@ -316,31 +503,31 @@ action_to_astnode: dict[
     SemanticAction,
     Callable[[SemanticStack, Token | None], ASTNode],
 ] = {
-    SemanticAction.MAKE_PROGRAM: Program,
-    SemanticAction.MAKE_DEFINITION_LIST: DefinitionList,
-    SemanticAction.MAKE_DEFINITION: Definition,
-    SemanticAction.MAKE_IDENTIFIER: Identifier,
-    SemanticAction.MAKE_PARAMETER_LIST: ParameterList,
-    SemanticAction.MAKE_ID_WITH_TYPE: IdWithType,
-    SemanticAction.MAKE_INTEGER_TYPE: IntegerType,
-    SemanticAction.MAKE_BOOLEAN_TYPE: BooleanType,
-    SemanticAction.MAKE_BODY: Body,
-    SemanticAction.MAKE_FUNCTION_CALL_EXPRESSION: FunctionCallExpression,
-    SemanticAction.MAKE_EQUALS_EXPRESSION: EqualsExpression,
-    SemanticAction.MAKE_LESS_THAN_EXPRESSION: LessThanExpression,
-    SemanticAction.MAKE_OR_EXPRESSION: OrExpression,
-    SemanticAction.MAKE_PLUS_EXPRESSION: PlusExpression,
-    SemanticAction.MAKE_MINUS_EXPRESSION: MinusExpression,
-    SemanticAction.MAKE_TIMES_EXPRESSION: TimesExpression,
-    SemanticAction.MAKE_DIVIDE_EXPRESSION: DivideExpression,
-    SemanticAction.MAKE_AND_EXPRESSION: AndExpression,
-    SemanticAction.MAKE_NOT_EXPRESSION: NotExpression,
-    SemanticAction.MAKE_UNARY_MINUS_EXPRESSION: UnaryMinusExpression,
-    SemanticAction.MAKE_IF_EXPRESSION: IfExpression,
-    SemanticAction.MAKE_ARGUMENT_LIST: ArgumentList,
-    SemanticAction.MAKE_ARGUMENT: Argument,
-    SemanticAction.MAKE_INTEGER_LITERAL: IntegerLiteral,
-    SemanticAction.MAKE_BOOLEAN_LITERAL: BooleanLiteral,
+    SemanticAction.MAKE_PROGRAM: Program.build,
+    SemanticAction.MAKE_DEFINITION_LIST: DefinitionList.build,
+    SemanticAction.MAKE_DEFINITION: Definition.build,
+    SemanticAction.MAKE_IDENTIFIER: Identifier.build,
+    SemanticAction.MAKE_PARAMETER_LIST: ParameterList.build,
+    SemanticAction.MAKE_ID_WITH_TYPE: IdWithType.build,
+    SemanticAction.MAKE_INTEGER_TYPE: IntegerType.build,
+    SemanticAction.MAKE_BOOLEAN_TYPE: BooleanType.build,
+    SemanticAction.MAKE_BODY: Body.build,
+    SemanticAction.MAKE_FUNCTION_CALL_EXPRESSION: FunctionCallExpression.build,
+    SemanticAction.MAKE_EQUALS_EXPRESSION: EqualsExpression.build,
+    SemanticAction.MAKE_LESS_THAN_EXPRESSION: LessThanExpression.build,
+    SemanticAction.MAKE_OR_EXPRESSION: OrExpression.build,
+    SemanticAction.MAKE_PLUS_EXPRESSION: PlusExpression.build,
+    SemanticAction.MAKE_MINUS_EXPRESSION: MinusExpression.build,
+    SemanticAction.MAKE_TIMES_EXPRESSION: TimesExpression.build,
+    SemanticAction.MAKE_DIVIDE_EXPRESSION: DivideExpression.build,
+    SemanticAction.MAKE_AND_EXPRESSION: AndExpression.build,
+    SemanticAction.MAKE_NOT_EXPRESSION: NotExpression.build,
+    SemanticAction.MAKE_UNARY_MINUS_EXPRESSION: UnaryMinusExpression.build,
+    SemanticAction.MAKE_IF_EXPRESSION: IfExpression.build,
+    SemanticAction.MAKE_ARGUMENT_LIST: ArgumentList.build,
+    SemanticAction.MAKE_ARGUMENT: Argument.build,
+    SemanticAction.MAKE_INTEGER_LITERAL: IntegerLiteral.build,
+    SemanticAction.MAKE_BOOLEAN_LITERAL: BooleanLiteral.build,
 }
 
 
@@ -440,7 +627,7 @@ def _astnode_to_dot(node: ASTNode):
             link(node, definition)
     elif isinstance(node, Definition):
         print(
-            f'{key} [label = "{node}\nname: {node.name.value}\nreturns {node.return_type}"]',
+            f'{key} [label = "{node}\nname {node.name.value}\nreturns {node.return_type}"]',
         )
         link(node, node.parameters, "parameters")
         link(node, node.body, "body")
