@@ -1,7 +1,7 @@
 from compiler.ast import ASTNode, SemanticAction, SemanticStack, action_to_astnode
 from compiler.klein_errors import ParseError
 from compiler.parse_table import NonTerminal, generate_parse_table
-from compiler.scanner import Scanner
+from compiler.scanner import Scanner, tokentype_to_str
 from compiler.tokens import Token, TokenType
 
 
@@ -20,7 +20,7 @@ class Parser:
         options: list[str] = []
         for token_type in TokenType:
             if (next_stack_item, token_type) in self._parse_table:
-                options.append(str(token_type))  # noqa: PERF401
+                options.append(tokentype_to_str(token_type))  # noqa: PERF401
         expected_message = ""
         if len(options) <= 1:
             expected_message = f"Expected {options[0]}."
@@ -48,7 +48,7 @@ class Parser:
                 most_recent_token = next_token
                 if next_stack_item != next_token.token_type:
                     raise ParseError(
-                        f"Expected {next_stack_item} and received {next_token.token_type}",
+                        f"Expected {tokentype_to_str(next_stack_item)} and received {tokentype_to_str(next_token.token_type)}",
                         position=next_token.position,
                         original_line=self._scanner.get_line(
                             next_token.position.get_line_number() - 1,
@@ -70,8 +70,14 @@ class Parser:
                     expected_message: str = self._generate_expected_options(
                         next_stack_item,
                     )
+                    from_display = (
+                        tokentype_to_str(key[0])
+                        if isinstance(key[0], TokenType)
+                        else str(key[0])
+                    )
+                    to_display = tokentype_to_str(key[1])
                     raise ParseError(
-                        f"Invalid transition from {key[0]} to {key[1]}.\n{expected_message}",
+                        f"Invalid transition from {from_display} to {to_display}.\n{expected_message}",
                         position=next_token.position,
                         original_line=self._scanner.get_line(
                             next_token.position.get_line_number() - 1,

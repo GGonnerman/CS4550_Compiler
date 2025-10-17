@@ -42,6 +42,12 @@ TOKEN_TO_DISPLAY_CHAR.update(
 )
 
 
+def tokentype_to_str(token_type: TokenType) -> str:
+    if token_type in TOKEN_TO_DISPLAY_CHAR:
+        return '"' + TOKEN_TO_DISPLAY_CHAR[token_type] + '"'
+    return str(token_type)
+
+
 class Scanner:
     def __init__(self, program: str):
         self.program: str = program
