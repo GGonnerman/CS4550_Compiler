@@ -1,0 +1,20 @@
+#!/bin/bash
+
+while test $# != 0
+do
+    case "$1" in
+    -f|--format) format=$2 ; shift ;;
+    *)  break ;;
+    esac
+    shift
+done
+
+PROGRAM_CONTENT=$(cat $1)
+
+if [[ "$format" == "dot" ]]; then
+    ./.venv/bin/klein_ast_to_dot "$PROGRAM_CONTENT"
+elif [[ "$format" == "text" || "${format+set}" != set ]]; then
+    ./.venv/bin/klein_ast_to_text "$PROGRAM_CONTENT"
+else
+    echo "Unrecognized format '$format' expected 'text' or 'dot'"
+fi

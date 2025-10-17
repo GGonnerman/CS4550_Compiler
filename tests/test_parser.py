@@ -2,12 +2,44 @@ from pathlib import Path
 
 import pytest
 
+from compiler.ast import (
+    AndExpression,
+    Argument,
+    ArgumentList,
+    ASTNode,
+    Body,
+    BooleanLiteral,
+    BooleanType,
+    Definition,
+    DefinitionList,
+    DivideExpression,
+    EqualsExpression,
+    FunctionCallExpression,
+    Identifier,
+    IdWithType,
+    IfExpression,
+    IntegerLiteral,
+    IntegerType,
+    LessThanExpression,
+    MinusExpression,
+    NotExpression,
+    OrExpression,
+    ParameterList,
+    PlusExpression,
+    Program,
+    TimesExpression,
+    UnaryMinusExpression,
+)
 from compiler.klein_errors import ParseError
 from compiler.parser import Parser
 from compiler.scanner import Scanner
 
 
-def success_case(program: str, expected_result: str | None, error_message: str):
+def blueprint(*definitions: Definition) -> Program:
+    return Program(DefinitionList(list(definitions)))
+
+
+def success_case(program: str, expected_result: ASTNode, error_message: str):
     s = Scanner(program)
     p = Parser(s)
     assert p.parse() == expected_result, error_message
@@ -21,12 +53,18 @@ def error_case(
     s = Scanner(program)
     p = Parser(s)
     with pytest.raises(ParseError) as excinfo:
-        p.parse()
+        _ = p.parse()
+    # TODO: In theory this should actually test it against a specific error message
+    # but for now just erroring is acceptable.
     # assert str(excinfo.value) == expected_message, error_message
 
 
 def test_parse_empty_file():
-    success_case("", None, "Empty program (no defintions) should parse")
+    success_case(
+        "",
+        Program(DefinitionList([])),
+        "Empty program (no defintions) should parse",
+    )
 
 
 def test_parse_definitions():
@@ -35,7 +73,14 @@ def test_parse_definitions():
     function test(): integer
         1
     """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("test"),
+                ParameterList([]),
+                IntegerType(),
+                Body([], IntegerLiteral("1")),
+            ),
+        ),
         "Program with single definition should parse",
     )
 
@@ -50,8 +95,138 @@ def test_parse_definitions():
     function d(): integer
         4
     """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("a"),
+                ParameterList([]),
+                IntegerType(),
+                Body([], IntegerLiteral("1")),
+            ),
+            Definition(
+                Identifier("b"),
+                ParameterList([]),
+                IntegerType(),
+                Body([], IntegerLiteral("2")),
+            ),
+            Definition(
+                Identifier("c"),
+                ParameterList([]),
+                IntegerType(),
+                Body([], IntegerLiteral("3")),
+            ),
+            Definition(
+                Identifier("d"),
+                ParameterList([]),
+                IntegerType(),
+                Body([], IntegerLiteral("4")),
+            ),
+        ),
         "Program with many definitions should parse",
+    )
+
+
+def test_expression_order():
+    success_case(
+        """
+    function test(): integer
+        1 + 2 + 3 or 4
+    """,
+        blueprint(
+            Definition(
+                Identifier("test"),
+                ParameterList([]),
+                IntegerType(),
+                Body(
+                    [],
+                    OrExpression(
+                        PlusExpression(
+                            PlusExpression(
+                                IntegerLiteral("1"),
+                                IntegerLiteral("2"),
+                            ),
+                            IntegerLiteral("3"),
+                        ),
+                        IntegerLiteral("4"),
+                    ),
+                ),
+            ),
+        ),
+        "Operators with same priority should execute left-to-right",
+    )
+
+    success_case(
+        """
+    function test(): integer
+        1 * 2 + 3
+    """,
+        blueprint(
+            Definition(
+                Identifier("test"),
+                ParameterList([]),
+                IntegerType(),
+                Body(
+                    [],
+                    PlusExpression(
+                        TimesExpression(
+                            IntegerLiteral("1"),
+                            IntegerLiteral("2"),
+                        ),
+                        IntegerLiteral("3"),
+                    ),
+                ),
+            ),
+        ),
+        "Times should bind closer than plus",
+    )
+
+    success_case(
+        """
+    function test(): integer
+        1 + 2 * 3
+    """,
+        blueprint(
+            Definition(
+                Identifier("test"),
+                ParameterList([]),
+                IntegerType(),
+                Body(
+                    [],
+                    PlusExpression(
+                        IntegerLiteral("1"),
+                        TimesExpression(
+                            IntegerLiteral("2"),
+                            IntegerLiteral("3"),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+        "Times should bind closer than plus",
+    )
+
+    success_case(
+        """
+    function test(): integer
+        (1 + 2) * 3
+    """,
+        blueprint(
+            Definition(
+                Identifier("test"),
+                ParameterList([]),
+                IntegerType(),
+                Body(
+                    [],
+                    TimesExpression(
+                        PlusExpression(
+                            IntegerLiteral("1"),
+                            IntegerLiteral("2"),
+                        ),
+                        IntegerLiteral("3"),
+                    ),
+                ),
+            ),
+        ),
+        "Parenthesis should force close binding",
     )
 
 
@@ -100,16 +275,30 @@ def test_return_type():
     function test(): integer
         1
     """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("test"),
+                ParameterList([]),
+                IntegerType(),
+                Body([], IntegerLiteral("1")),
+            ),
+        ),
         "Program should allow integer return type",
     )
 
     success_case(
         """
     function test(): boolean
-        1
+        true
     """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("test"),
+                ParameterList([]),
+                BooleanType(),
+                Body([], BooleanLiteral("true")),
+            ),
+        ),
         "Program should allow boolean return type",
     )
 
@@ -158,7 +347,18 @@ def test_parameters():
     function test(a : integer): integer
         1
     """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("test"),
+                ParameterList(
+                    [
+                        IdWithType(Identifier("a"), IntegerType()),
+                    ],
+                ),
+                IntegerType(),
+                Body([], IntegerLiteral("1")),
+            ),
+        ),
         "Program should allow single integer parameters",
     )
 
@@ -167,7 +367,18 @@ def test_parameters():
     function test(a : boolean): integer
         1
     """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("test"),
+                ParameterList(
+                    [
+                        IdWithType(Identifier("a"), BooleanType()),
+                    ],
+                ),
+                IntegerType(),
+                Body([], IntegerLiteral("1")),
+            ),
+        ),
         "Program should allow single boolean parameters",
     )
 
@@ -176,7 +387,20 @@ def test_parameters():
     function test(a : integer, b : boolean, c: integer): integer
         1
     """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("test"),
+                ParameterList(
+                    [
+                        IdWithType(Identifier("a"), IntegerType()),
+                        IdWithType(Identifier("b"), BooleanType()),
+                        IdWithType(Identifier("c"), IntegerType()),
+                    ],
+                ),
+                IntegerType(),
+                Body([], IntegerLiteral("1")),
+            ),
+        ),
         "Program should allow multiple parameters",
     )
 
@@ -240,17 +464,22 @@ def test_print_expression():
         print(12)
         1
     """,
-        None,
-        "Program should allow print statements",
-    )
-
-    success_case(
-        """
-    function test(a : integer): integer
-        print(12)
-        1
-    """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("test"),
+                ParameterList([IdWithType(Identifier("a"), IntegerType())]),
+                IntegerType(),
+                Body(
+                    [
+                        FunctionCallExpression(
+                            Identifier("print"),
+                            ArgumentList([Argument(IntegerLiteral("12"))]),
+                        ),
+                    ],
+                    IntegerLiteral("1"),
+                ),
+            ),
+        ),
         "Program should allow print statements",
     )
 
@@ -262,7 +491,30 @@ def test_print_expression():
         print(3)
         1
     """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("test"),
+                ParameterList([IdWithType(Identifier("a"), IntegerType())]),
+                IntegerType(),
+                Body(
+                    [
+                        FunctionCallExpression(
+                            Identifier("print"),
+                            ArgumentList([Argument(IntegerLiteral("1"))]),
+                        ),
+                        FunctionCallExpression(
+                            Identifier("print"),
+                            ArgumentList([Argument(IntegerLiteral("2"))]),
+                        ),
+                        FunctionCallExpression(
+                            Identifier("print"),
+                            ArgumentList([Argument(IntegerLiteral("3"))]),
+                        ),
+                    ],
+                    IntegerLiteral("1"),
+                ),
+            ),
+        ),
         "Program should allow multiple print statements",
     )
 
@@ -272,7 +524,37 @@ def test_print_expression():
         print(not 12 or 3 + 4 * 5)
         1
     """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("test"),
+                ParameterList([IdWithType(Identifier("a"), IntegerType())]),
+                IntegerType(),
+                Body(
+                    [
+                        FunctionCallExpression(
+                            Identifier("print"),
+                            ArgumentList(
+                                [
+                                    Argument(
+                                        PlusExpression(
+                                            OrExpression(
+                                                NotExpression(IntegerLiteral("12")),
+                                                IntegerLiteral("3"),
+                                            ),
+                                            TimesExpression(
+                                                IntegerLiteral("4"),
+                                                IntegerLiteral("5"),
+                                            ),
+                                        ),
+                                    ),
+                                ],
+                            ),
+                        ),
+                    ],
+                    IntegerLiteral("1"),
+                ),
+            ),
+        ),
         "Program should allow complex print statements",
     )
 
@@ -318,7 +600,20 @@ def test_argument_list():
         function main(): integer
             add()
         """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("add"),
+                ParameterList([]),
+                IntegerType(),
+                Body([], IntegerLiteral("1")),
+            ),
+            Definition(
+                Identifier("main"),
+                ParameterList([]),
+                IntegerType(),
+                Body([], FunctionCallExpression(Identifier("add"), ArgumentList([]))),
+            ),
+        ),
         "Empty argument list should work",
     )
 
@@ -329,7 +624,26 @@ def test_argument_list():
         function main(): integer
             add(1)
         """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("add"),
+                ParameterList([]),
+                IntegerType(),
+                Body([], IntegerLiteral("1")),
+            ),
+            Definition(
+                Identifier("main"),
+                ParameterList([]),
+                IntegerType(),
+                Body(
+                    [],
+                    FunctionCallExpression(
+                        Identifier("add"),
+                        ArgumentList([Argument(IntegerLiteral("1"))]),
+                    ),
+                ),
+            ),
+        ),
         "Single argument should work",
     )
 
@@ -340,7 +654,33 @@ def test_argument_list():
         function main(): integer
             add(1, 2, 3, 4)
         """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("add"),
+                ParameterList([]),
+                IntegerType(),
+                Body([], IntegerLiteral("1")),
+            ),
+            Definition(
+                Identifier("main"),
+                ParameterList([]),
+                IntegerType(),
+                Body(
+                    [],
+                    FunctionCallExpression(
+                        Identifier("add"),
+                        ArgumentList(
+                            [
+                                Argument(IntegerLiteral("1")),
+                                Argument(IntegerLiteral("2")),
+                                Argument(IntegerLiteral("3")),
+                                Argument(IntegerLiteral("4")),
+                            ],
+                        ),
+                    ),
+                ),
+            ),
+        ),
         "Many arguments should work",
     )
 
@@ -351,7 +691,58 @@ def test_argument_list():
         function main(): integer
             add(1 * 2 + 3 and 4, 5 * 6 or 7 and add(1))
         """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("add"),
+                ParameterList([]),
+                IntegerType(),
+                Body([], IntegerLiteral("1")),
+            ),
+            Definition(
+                Identifier("main"),
+                ParameterList([]),
+                IntegerType(),
+                Body(
+                    [],
+                    FunctionCallExpression(
+                        Identifier("add"),
+                        ArgumentList(
+                            [
+                                Argument(
+                                    PlusExpression(
+                                        TimesExpression(
+                                            IntegerLiteral("1"),
+                                            IntegerLiteral("2"),
+                                        ),
+                                        AndExpression(
+                                            IntegerLiteral("3"),
+                                            IntegerLiteral("4"),
+                                        ),
+                                    ),
+                                ),
+                                Argument(
+                                    OrExpression(
+                                        TimesExpression(
+                                            IntegerLiteral("5"),
+                                            IntegerLiteral("6"),
+                                        ),
+                                        AndExpression(
+                                            IntegerLiteral("7"),
+                                            FunctionCallExpression(
+                                                Identifier("add"),
+                                                ArgumentList(
+                                                    [Argument(IntegerLiteral("1"))],
+                                                ),
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                            ],
+                        ),
+                    ),
+                ),
+            ),
+        ),
         "Complex arguments should work",
     )
 
@@ -386,7 +777,41 @@ def test_term():
         function add(): integer
             1 * true * 3 * false / 5 / true and 7 and false and 9
         """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("add"),
+                ParameterList([]),
+                IntegerType(),
+                Body(
+                    [],
+                    AndExpression(
+                        AndExpression(
+                            AndExpression(
+                                DivideExpression(
+                                    DivideExpression(
+                                        TimesExpression(
+                                            TimesExpression(
+                                                TimesExpression(
+                                                    IntegerLiteral("1"),
+                                                    BooleanLiteral("true"),
+                                                ),
+                                                IntegerLiteral("3"),
+                                            ),
+                                            BooleanLiteral("false"),
+                                        ),
+                                        IntegerLiteral("5"),
+                                    ),
+                                    BooleanLiteral("true"),
+                                ),
+                                IntegerLiteral("7"),
+                            ),
+                            BooleanLiteral("false"),
+                        ),
+                        IntegerLiteral("9"),
+                    ),
+                ),
+            ),
+        ),
         "Any valid terms should work",
     )
 
@@ -395,7 +820,38 @@ def test_term():
         function add(): integer
             1 * my_fun(12) / 2 * (1 + 2)
         """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("add"),
+                ParameterList([]),
+                IntegerType(),
+                Body(
+                    [],
+                    TimesExpression(
+                        DivideExpression(
+                            TimesExpression(
+                                IntegerLiteral("1"),
+                                FunctionCallExpression(
+                                    Identifier("my_fun"),
+                                    ArgumentList(
+                                        [
+                                            Argument(
+                                                IntegerLiteral("12"),
+                                            ),
+                                        ],
+                                    ),
+                                ),
+                            ),
+                            IntegerLiteral("2"),
+                        ),
+                        PlusExpression(
+                            IntegerLiteral("1"),
+                            IntegerLiteral("2"),
+                        ),
+                    ),
+                ),
+            ),
+        ),
         "Complex terms with factors inside should work",
     )
 
@@ -433,7 +889,7 @@ def test_factor():
     success_case(
         """
         function add(): integer
-            1 and 
+            1 and
             true and
             not 2 and
             my_id and
@@ -441,7 +897,50 @@ def test_factor():
             if true then 5 else 6 and
             ( 7 * 8 )
         """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("add"),
+                ParameterList([]),
+                IntegerType(),
+                Body(
+                    [],
+                    AndExpression(
+                        AndExpression(
+                            AndExpression(
+                                AndExpression(
+                                    AndExpression(
+                                        IntegerLiteral("1"),
+                                        BooleanLiteral("true"),
+                                    ),
+                                    NotExpression(IntegerLiteral("2")),
+                                ),
+                                Identifier("my_id"),
+                            ),
+                            FunctionCallExpression(
+                                Identifier("my_fun"),
+                                ArgumentList(
+                                    [
+                                        Argument(IntegerLiteral("3")),
+                                        Argument(IntegerLiteral("4")),
+                                    ],
+                                ),
+                            ),
+                        ),
+                        IfExpression(
+                            BooleanLiteral("true"),
+                            IntegerLiteral("5"),
+                            AndExpression(
+                                IntegerLiteral("6"),
+                                TimesExpression(
+                                    IntegerLiteral("7"),
+                                    IntegerLiteral("8"),
+                                ),
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        ),
         "Any valid factor should work",
     )
 
@@ -512,7 +1011,35 @@ def test_simple_expression():
     function test(): integer
         1 or 2 or 3 + 4 + 5 - 6 - 7
     """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("test"),
+                ParameterList([]),
+                IntegerType(),
+                Body(
+                    [],
+                    MinusExpression(
+                        MinusExpression(
+                            PlusExpression(
+                                PlusExpression(
+                                    OrExpression(
+                                        OrExpression(
+                                            IntegerLiteral("1"),
+                                            IntegerLiteral("2"),
+                                        ),
+                                        IntegerLiteral("3"),
+                                    ),
+                                    IntegerLiteral("4"),
+                                ),
+                                IntegerLiteral("5"),
+                            ),
+                            IntegerLiteral("6"),
+                        ),
+                        IntegerLiteral("7"),
+                    ),
+                ),
+            ),
+        ),
         "Many simple expressions in a row should work",
     )
 
@@ -521,7 +1048,32 @@ def test_simple_expression():
     function test(): integer
         1 or (2 or (3 + 4) - 5) - (6 + 7)
     """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("test"),
+                ParameterList([]),
+                IntegerType(),
+                Body(
+                    [],
+                    MinusExpression(
+                        OrExpression(
+                            IntegerLiteral("1"),
+                            MinusExpression(
+                                OrExpression(
+                                    IntegerLiteral("2"),
+                                    PlusExpression(
+                                        IntegerLiteral("3"),
+                                        IntegerLiteral("4"),
+                                    ),
+                                ),
+                                IntegerLiteral("5"),
+                            ),
+                        ),
+                        PlusExpression(IntegerLiteral("6"), IntegerLiteral("7")),
+                    ),
+                ),
+            ),
+        ),
         "Simple expression should allow nested complex expressions",
     )
 
@@ -530,7 +1082,22 @@ def test_simple_expression():
     function test(): integer
         1 - - 2
     """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("test"),
+                ParameterList([]),
+                IntegerType(),
+                Body(
+                    [],
+                    MinusExpression(
+                        IntegerLiteral("1"),
+                        UnaryMinusExpression(
+                            IntegerLiteral("2"),
+                        ),
+                    ),
+                ),
+            ),
+        ),
         "Adding a negative value should be allowed",
     )
     success_case(
@@ -538,7 +1105,26 @@ def test_simple_expression():
     function test(): boolean
         1 < 2 = (3 < 4)
     """,
-        None,
+        blueprint(
+            Definition(
+                Identifier("test"),
+                ParameterList([]),
+                BooleanType(),
+                Body(
+                    [],
+                    EqualsExpression(
+                        LessThanExpression(
+                            IntegerLiteral("1"),
+                            IntegerLiteral("2"),
+                        ),
+                        LessThanExpression(
+                            IntegerLiteral("3"),
+                            IntegerLiteral("4"),
+                        ),
+                    ),
+                ),
+            ),
+        ),
         "Nested comparisons should parse",
     )
 
@@ -572,4 +1158,4 @@ def test_all_programs():
         path = program_path / file
         s = Scanner(path.open().read())
         p = Parser(s)
-        assert p.parse() is None
+        _ = p.parse()

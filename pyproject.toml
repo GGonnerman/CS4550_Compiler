@@ -11,8 +11,8 @@ requires-python = ">=3.11"
 [project.scripts]
 klein_list_tokens = "compiler.__main__:list_tokens"
 klein_parse_program = "compiler.__main__:klein_parse_program"
+klein_ast_to_text = "compiler.__main__:klein_ast_to_text"
+klein_ast_to_dot = "compiler.__main__:klein_ast_to_dot"
 
 [tool.pytest.ini_options]
-addopts = [
-    "--import-mode=importlib",
-]
+addopts = ["--import-mode=importlib"]
