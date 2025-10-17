@@ -20,3 +20,7 @@ def ast_to_text():
         print(e)
     except Exception:
         print("Klein Error: unable to continue processing")
+
+
+if __name__ == "__main__":
+    ast_to_text()

@@ -15,15 +15,19 @@ Produced by the **Compile Squad**
 - `scanner.py`: Scans through the program and seperates each character of string of characters into tokens
 - `position.py`: Custom position class to track the location in the program
 - `token.py`: Custom token class with a number of TokenTypes
-- `token_lister.py`: Takes in a program and prints its token in an easily readable format
 - `klein_errors.py`: Custom errors classes related to different stages of compiling
 - `__init__.py`: These files are empty, but are required through to let python know that the current folder is a module.
 - `__main__.py`: This file provides some scripts which are accessible to the user after installation
 - `requirements.txt`: a list of all 3d party dependencies which get automatically installed when running make setup
 - `parser.py`: Parses a program via a passed scanner and optionally the file name of the parse table to use
+- `ast.py`: All ast nodes and utilities to display
 - `parse_table.py`: Parses a file into a usable parse table
-- `validator.py`: Takes in the name of a file and prints whether it is a valid klein program or what issues arose when parsing
 - `parse-table.csv`: A parse table made by hand in [Google Sheets](https://docs.google.com/spreadsheets/d/1-ugst1Gmi6EBQGiQIIBZfSfw-93SWWUm1b03G6lsCB4/edit?usp=sharing). Each value corresponds to an enum (either TokenType or NonTerminal).
+- `src/compiler`: Takes in a program and prints its token in an easily readable format
+- `token_lister.py`: Takes in a program and prints its token in an easily readable format
+- `validator.py`: Takes in a program and prints whether it is a valid klein program or what issues arose when parsing
+- `ast_lister.py`: Takes in a program and prints its ast as text
+- `ast_lister_dot.py`: Takes in a program and prints its ast as a dot program
 
 #### Documentation Files
 
@@ -41,9 +45,20 @@ Produced by the **Compile Squad**
 - `Makefile`: easily provides functionality to users related to installing and running the compiler
 - `kleins`: a bash script to allow scanning any klein program
 - `kleinf`: a bash script to allow validating any klein program
+- `kleinp`: a bash script to allow printing the ast of any klein program
 - `CS4550_Compiler.code-workspace` and `.vscode`: We all use vscode, so these files help our configurations to stay in sync.
 - `.ruff.toml`: configurations for ruff (python linter and formatter) to help standardize code
+
+#### Programs
+
 - `programs/`: a variety of programs (some functional and some intentionally non-functional) written in the klein language
+- `programs/BMI.kln`: Calculates BMI (Module 1)
+- `programs/CommaErr.kln`: Small Error: Has a trailing comma in parameter list (Module 2)
+- `programs/If_ThenErr.kln`: Small Error: If is missing then (Module 2)
+- `programs/PrintErr.kln`: Small Error: Missing return value in body (Module 2)
+- `programs/PrintErr2.kln`: Small Error: Print inside of an expression (Module 2)
+- `programs/TypeErr.kln`: Small Error: No type in formal parameter (Module 2)
+- `programs/FractionAdd.kln`: Adds 2 fractions and prints out result (Module 3)
 
 #### Test Files
 
@@ -76,6 +91,10 @@ Produced by the **Compile Squad**
 - Run `make setup`
   - This will create a virtual environment (assuming one does not already exist) using venv
   - Then, it will install all required dependencies
+  - NOTE: If this fails complaining about wrong python version, you must
+    1. Delete the generated .venv folder (otherwise it will remain there and cause future issues)
+    2. Either modify the Makefile or change your python3 path to meet required version
+    3. Retry `make setup`
 - Thats it! Now your path depends on what you want to do
 
 #### Running kleins/kleinf on a klein source code file
@@ -84,6 +103,16 @@ Produced by the **Compile Squad**
 - Ensure that the `kleins` file in the project root is executable
   - If not, running `chmod +x kleins` should make it
 - From the root, you can now run `./kleins path/to/source.kln`
+
+#### Running kleinp on a klein source code file to print text or dot
+
+- Ensure that the `kleinp` file in the project root is executable
+  - If not, running `chmod +x kleinp` should make it
+- From the root, you can now run `./kleinp path/to/source.kln`
+- kleinp defaults to printing text, but it can be customized using the `--format` flag
+  - Running `./kleinp --format text path/to/source.kln` will print the file as a 2-space indented text tree
+  - Running `./kleinp --format dot path/to/source.kln` will print the file as a dot program
+    - So, given proper dot installation, one can for example run `./kleinp --format dot path/to/source.kln | dot -T png -o out.png` and then view open the out.png file in an external program.
 
 #### Running any python file
 
@@ -99,7 +128,7 @@ Produced by the **Compile Squad**
   - 1 As a script:
     - You can now run `klein_list_tokens $'hello, world\n123'` and see the tokens used!
   - 2 As a file:
-    - Now you can run the token lister against programs like `python src/compiler/token_lister.py $'hello, world\n123'` and see the tokens used!
+    - Now you can run the token lister against programs like `python src/compiler/programs/token_lister.py $'hello, world\n123'` and see the tokens used!
     - You can run any file, not just the token_lister - however, that file has the most interesting behavior.
 
 #### Running the program validator
@@ -110,7 +139,19 @@ Produced by the **Compile Squad**
   - 1 As a script:
     - You can now run `klein_parse_program $'function hi(): integer 1'` and see if the program is valid
   - 2 As a file:
-    - Now you can run the program validator against programs like `python src/compiler/token_lister.py $'function hi(): integer 1'` and see if it is valid!
+    - Now you can run the program validator against programs like `python src/compiler/programs/token_lister.py $'function hi(): integer 1'` and see if it is valid!
+
+#### Running the ast printer
+
+- Activate the virtual environment
+  - This can be done by (from the root) running `source ./.venv/bin/activate`
+- Two options:
+  - 1 As a script:
+    - You can now run `klein_print_ast_text $'function hi(): integer 1'` and see your programs ast as text
+    - You can now run `klein_print_ast_dot $'function hi(): integer 1'` and see your programs ast as a dot program
+  - 2 As a file:
+    - Now you can run the ast printer like `python src/compiler/programs/ast_lister.py $'function hi(): integer 1'` and see the ast in text
+    - Now you can run the ast dot printer like `python src/compiler/programs/ast_lister_dot.py $'function hi(): integer 1'` and see the ast as a dot program
 
 #### Running Tests
 
