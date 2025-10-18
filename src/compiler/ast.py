@@ -197,9 +197,9 @@ class Definition(ASTNode):
 
 
 class ParameterList(ASTNode):
-    def __init__(self, definitions: Iterable["IdWithType"]):
+    def __init__(self, parameters: Iterable["IdWithType"]):
         super().__init__()
-        self.definitions: tuple[IdWithType, ...] = tuple(definitions)
+        self.parameters: tuple[IdWithType, ...] = tuple(parameters)
 
     @override
     @classmethod
@@ -208,14 +208,14 @@ class ParameterList(ASTNode):
         semantic_stack: SemanticStack,
         most_recent_token: Token | None,
     ) -> "ParameterList":
-        definitions: list[IdWithType] = []
+        parameters: list[IdWithType] = []
         while not semantic_stack.is_empty():
             next_node = semantic_stack.pop_if(IdWithType)
             if next_node:
-                definitions.insert(0, next_node)
+                parameters.insert(0, next_node)
             else:
                 break
-        return ParameterList(definitions)
+        return ParameterList(parameters)
 
 
 class Body(ASTNode):
@@ -583,7 +583,7 @@ def display_astnode(node: ASTNode, indent: int = 0, spacer: str = "  "):
         print(f"{sub_indent}body")
         display_astnode(node.body, indent + 2, spacer)
     elif isinstance(node, ParameterList):
-        for parameter in node.definitions:
+        for parameter in node.parameters:
             display_astnode(parameter, indent, spacer)
     elif isinstance(node, IdWithType):
         print(f"{main_indent}{node.type} {node.name.value}")
@@ -667,7 +667,7 @@ def _astnode_to_dot(node: ASTNode):
         link(node, node.body, "body")
     elif isinstance(node, ParameterList):
         print(f'{key} [label = "{node}"]')
-        for parameter in node.definitions:
+        for parameter in node.parameters:
             link(node, parameter)
     elif isinstance(node, IdWithType):
         print(f'{key} [label = "name {node.name.value}\ntype {node.type}"]')

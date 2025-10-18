@@ -20,10 +20,10 @@ Produced by the **Compile Squad**
 - `__main__.py`: This file provides some scripts which are accessible to the user after installation
 - `requirements.txt`: a list of all 3d party dependencies which get automatically installed when running make setup
 - `parser.py`: Parses a program via a passed scanner and optionally the file name of the parse table to use
-- `ast.py`: All ast nodes and utilities to display
 - `parse_table.py`: Parses a file into a usable parse table
 - `parse-table.csv`: A parse table made by hand in [Google Sheets](https://docs.google.com/spreadsheets/d/1-ugst1Gmi6EBQGiQIIBZfSfw-93SWWUm1b03G6lsCB4/edit?usp=sharing). Each value corresponds to an enum (either TokenType or NonTerminal).
-- `src/compiler`: Takes in a program and prints its token in an easily readable format
+- `ast.py`: All ast nodes and utilities to display
+- `src/compiler/programs`: The home for all user-facing program source code
 - `token_lister.py`: Takes in a program and prints its token in an easily readable format
 - `validator.py`: Takes in a program and prints whether it is a valid klein program or what issues arose when parsing
 - `ast_lister.py`: Takes in a program and prints its ast as text
@@ -52,6 +52,8 @@ Produced by the **Compile Squad**
 #### Programs
 
 - `programs/`: a variety of programs (some functional and some intentionally non-functional) written in the klein language
+- `programs/EveryNode.kln`: Generates every node type (No module association)
+- `programs/MissingBody.kln`: Small Error: Has no definition body but has a print followed by a long comment (No module association)
 - `programs/BMI.kln`: Calculates BMI (Module 1)
 - `programs/CommaErr.kln`: Small Error: Has a trailing comma in parameter list (Module 2)
 - `programs/If_ThenErr.kln`: Small Error: If is missing then (Module 2)
@@ -147,8 +149,8 @@ Produced by the **Compile Squad**
   - This can be done by (from the root) running `source ./.venv/bin/activate`
 - Two options:
   - 1 As a script:
-    - You can now run `klein_print_ast_text $'function hi(): integer 1'` and see your programs ast as text
-    - You can now run `klein_print_ast_dot $'function hi(): integer 1'` and see your programs ast as a dot program
+    - You can now run `klein_ast_to_text $'function hi(): integer 1'` and see your programs ast as text
+    - You can now run `klein_ast_to_dot $'function hi(): integer 1'` and see your programs ast as a dot program
   - 2 As a file:
     - Now you can run the ast printer like `python src/compiler/programs/ast_lister.py $'function hi(): integer 1'` and see the ast in text
     - Now you can run the ast dot printer like `python src/compiler/programs/ast_lister_dot.py $'function hi(): integer 1'` and see the ast as a dot program

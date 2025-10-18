@@ -1,4 +1,5 @@
 Desired AST Nodes and Properties
+ASTNode (abc)
 program
 - definition_list
 definition_list
@@ -16,9 +17,14 @@ body
 idWithType
 - name: identifier
 - type: type
-Type
+Type (abc)
 integerType
 booleanType
+BinaryExpression (abc)
+- left_side: expression
+- right_side: expression
+UnaryExpression (abc)
+- value: expression
 equalsExpression
 - left_side: expression
 - right_side: expression
@@ -48,9 +54,9 @@ notExpression
 unaryMinusExpression
 - value: expression
 ifexpression
-- if: expression
-- then: expression
-- else: expression
+- condition: expression
+- consequent: expression
+- alternative: expression
 functionCallExpression
 - function_name: identifier
 - argument_list: argument_list
@@ -58,11 +64,11 @@ argument_list
 - arguments: argument[]
 argument
 - value: expression
-Literal
+Literal (abc)
 IntegerLiteral
-- value: string? integer?
+- value: string
 BooleanLiteral
-- value: string? boolean?
+- value: string
 
 identifier
 - value: string
