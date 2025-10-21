@@ -1,18 +1,19 @@
 import sys
 
+from compiler.ast import display_astnode
 from compiler.klein_errors import LexicalError, ParseError
 from compiler.parser import Parser
 from compiler.scanner import Scanner
 
 
-def validate_klein_program():
+def ast_to_text():
     program = sys.argv[1] if len(sys.argv) > 1 else ""
     scanner = Scanner(program)
     parser = Parser(scanner)
 
     try:
-        parser.parse()
-        print("valid program")
+        ast = parser.parse()
+        display_astnode(ast)
     except LexicalError as e:
         print(e)
     except ParseError as e:
@@ -22,4 +23,4 @@ def validate_klein_program():
 
 
 if __name__ == "__main__":
-    validate_klein_program()
+    ast_to_text()

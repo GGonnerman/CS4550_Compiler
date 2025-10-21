@@ -1,0 +1,74 @@
+Desired AST Nodes and Properties
+ASTNode (abc)
+program
+- definition_list
+definition_list
+- definitions: definition[]
+definition
+- name: identifier
+- parameters: parameterList
+- return_type: type
+- body: body
+parameterList
+- parameters: idWithType[]
+body
+- print_expressions: function_call[]
+- body: expression
+idWithType
+- name: identifier
+- type: type
+Type (abc)
+integerType
+booleanType
+BinaryExpression (abc)
+- left_side: expression
+- right_side: expression
+UnaryExpression (abc)
+- value: expression
+equalsExpression
+- left_side: expression
+- right_side: expression
+lessThanExpression
+- left_side: expression
+- right_side: expression
+orExpression
+- left_side: expression
+- right_side: expression
+plusExpression
+- left_side: expression
+- right_side: expression
+minusExpression
+- left_side: expression
+- right_side: expression
+timesExpression
+- left_side: expression
+- right_side: expression
+divideExpression
+- left_side: expression
+- right_side: expression
+andExpression
+- left_side: expression
+- right_side: expression
+notExpression
+- value: expression
+unaryMinusExpression
+- value: expression
+ifexpression
+- condition: expression
+- consequent: expression
+- alternative: expression
+functionCallExpression
+- function_name: identifier
+- argument_list: argument_list
+argument_list
+- arguments: argument[]
+argument
+- value: expression
+Literal (abc)
+IntegerLiteral
+- value: string
+BooleanLiteral
+- value: string
+
+identifier
+- value: string

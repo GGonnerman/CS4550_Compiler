@@ -1,23 +1,23 @@
 ,keyword_integer,keyword_boolean,keyword_if,keyword_then,keyword_else,keyword_not,keyword_and,keyword_or,keyword_function,keyword_print,identifier,integer,boolean,left_paren,right_paren,comma,colon,plus,minus,times,divide,less_than,equal,end_of_file
-program,,,,,,,,,definition_list,,,,,,,,,,,,,,,definition_list
+program,,,,,,,,,definition_list make_definition_list make_program,,,,,,,,,,,,,,,definition_list make_definition_list make_program
 definition_list,,,,,,,,,definition definition_list,,,,,,,,,,,,,,,None
-definition,,,,,,,,,keyword_function identifier left_paren parameter_list right_paren colon type body,,,,,,,,,,,,,,,
+definition,,,,,,,,,keyword_function identifier make_identifier left_paren parameter_list make_parameter_list right_paren colon type body make_definition,,,,,,,,,,,,,,,
 parameter_list,,,,,,,,,,,formal_parameters,,,,None,,,,,,,,,
 formal_parameters,,,,,,,,,,,id_with_type formal_parameters_rest,,,,,,,,,,,,,
-formal_parameters_rest,,,,,,,,,,,,,,,None,comma formal_parameters,,,,,,,,
-id_with_type,,,,,,,,,,,identifier colon type,,,,,,,,,,,,,
-type,keyword_integer,keyword_boolean,,,,,,,,,,,,,,,,,,,,,,
-body,,,expression,,,expression,,,,print_expression body,expression,expression,expression,expression,,,,,expression,,,,,
-print_expression,,,,,,,,,,keyword_print left_paren expression right_paren,,,,,,,,,,,,,,
+formal_parameters_rest,,,,,,,,,,,,,,,None,comma id_with_type formal_parameters_rest,,,,,,,,
+id_with_type,,,,,,,,,,,identifier make_identifier colon type make_id_with_type,,,,,,,,,,,,,
+type,keyword_integer make_integer_type,keyword_boolean make_boolean_type,,,,,,,,,,,,,,,,,,,,,,
+body,,,expression make_body,,,expression make_body,,,,print_expression body,expression make_body,expression make_body,expression make_body,expression make_body,,,,,expression make_body,,,,,
+print_expression,,,,,,,,,,keyword_print make_identifier left_paren expression make_argument make_argument_list right_paren make_function_call_expression,,,,,,,,,,,,,,
 expression,,,simple_expression expression_rest,,,simple_expression expression_rest,,,,,simple_expression expression_rest,simple_expression expression_rest,simple_expression expression_rest,simple_expression expression_rest,,,,,simple_expression expression_rest,,,,,
-expression_rest,,,,None,None,,,,None,,,,,,None,None,,,,,,less_than expression,equal expression,None
+expression_rest,,,,None,None,,,,None,,,,,,None,None,,,,,,less_than simple_expression make_less_than_expression expression_rest,equal simple_expression make_equals_expression expression_rest,None
 simple_expression,,,term simple_expression_rest,,,term simple_expression_rest,,,,,term simple_expression_rest,term simple_expression_rest,term simple_expression_rest,term simple_expression_rest,,,,,term simple_expression_rest,,,,,
-simple_expression_rest,,,,None,None,,,keyword_or simple_expression,None,,,,,,None,None,,plus simple_expression,minus simple_expression,,,None,None,None
+simple_expression_rest,,,,None,None,,,keyword_or term make_or_expression simple_expression_rest,None,,,,,,None,None,,plus term make_plus_expression simple_expression_rest,minus term make_minus_expression simple_expression_rest,,,None,None,None
 term,,,factor term_rest,,,factor term_rest,,,,,factor term_rest,factor term_rest,factor term_rest,factor term_rest,,,,,factor term_rest,,,,,
-term_rest,,,,None,None,,keyword_and term,None,None,,,,,,None,None,,None,None,times term,divide term,None,None,None
-factor,,,keyword_if expression keyword_then expression keyword_else expression,,,keyword_not factor,,,,,identifier factor_rest,literal,literal,left_paren expression right_paren,,,,,minus factor,,,,,
-factor_rest,,,,None,None,,None,None,None,,,,,left_paren argument_list right_paren,None,None,,None,None,None,None,None,None,None
+term_rest,,,,None,None,,keyword_and factor make_and_expression term_rest,None,None,,,,,,None,None,,None,None,times factor make_times_expression term_rest,divide factor make_divide_expression term_rest,None,None,None
+factor,,,keyword_if expression keyword_then expression keyword_else expression make_if_expression,,,keyword_not factor make_not_expression,,,,,identifier make_identifier factor_rest,literal,literal,left_paren expression right_paren,,,,,minus factor make_unary_minus_expression,,,,,
+factor_rest,,,,None,None,,None,None,None,,,,,left_paren argument_list make_argument_list right_paren make_function_call_expression,None,None,,None,None,None,None,None,None,None
 argument_list,,,formal_arguments,,,formal_arguments,,,,,formal_arguments,formal_arguments,formal_arguments,formal_arguments,None,,,,formal_arguments,,,,,
-formal_arguments,,,expression formal_arguments_rest,,,expression formal_arguments_rest,,,,,expression formal_arguments_rest,expression formal_arguments_rest,expression formal_arguments_rest,expression formal_arguments_rest,,,,,expression formal_arguments_rest,,,,,
-formal_arguments_rest,,,,,,,,,,,,,,,None,comma formal_arguments,,,,,,,,
-literal,,,,,,,,,,,,integer,boolean,,,,,,,,,,,
+formal_arguments,,,expression make_argument formal_arguments_rest,,,expression make_argument formal_arguments_rest,,,,,expression make_argument formal_arguments_rest,expression make_argument formal_arguments_rest,expression make_argument formal_arguments_rest,expression make_argument formal_arguments_rest,,,,,expression make_argument formal_arguments_rest,,,,,
+formal_arguments_rest,,,,,,,,,,,,,,,None,comma expression make_argument formal_arguments_rest,,,,,,,,
+literal,,,,,,,,,,,,integer make_integer_literal,boolean make_boolean_literal,,,,,,,,,,,

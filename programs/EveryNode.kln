@@ -1,0 +1,12 @@
+(* This program calculates BMI*)
+
+function iReturnBoolean(): boolean
+    true
+
+function iReturnInteger(a : integer, b : integer, c : boolean): integer
+    print(a)
+    print(c)
+    if ((a < b) or (a = b)) or not c
+    then iReturnInteger(a, b+1, true)
+    else
+      a + a / b * -a = a

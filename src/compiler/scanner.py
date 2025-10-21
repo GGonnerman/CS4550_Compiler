@@ -24,6 +24,29 @@ KEYWORDS: dict[str, TokenType] = {
 }
 BOOLEANS: set[str] = {"true", "false"}
 
+TOKEN_TO_DISPLAY_CHAR: dict[TokenType, str] = {
+    TokenType.LEFT_PAREN: "(",
+    TokenType.RIGHT_PAREN: ")",
+    TokenType.COMMA: ",",
+    TokenType.COLON: ":",
+    TokenType.PLUS: "+",
+    TokenType.MINUS: "-",
+    TokenType.TIMES: "*",
+    TokenType.DIVIDE: "/",
+    TokenType.LESS_THAN: "<",
+    TokenType.EQUAL: "=",
+}
+
+TOKEN_TO_DISPLAY_CHAR.update(
+    [(v, k) for k, v in KEYWORDS.items()],
+)
+
+
+def tokentype_to_str(token_type: TokenType) -> str:
+    if token_type in TOKEN_TO_DISPLAY_CHAR:
+        return '"' + TOKEN_TO_DISPLAY_CHAR[token_type] + '"'
+    return str(token_type)
+
 
 class Scanner:
     def __init__(self, program: str):
@@ -32,6 +55,12 @@ class Scanner:
         self.position: Position = Position()
         self.working_position: Position = Position()
         self.accum: str = ""
+
+    def get_line(self, idx: int):
+        lines: list[str] = self.program.split("\n")
+        if idx < 0 or idx >= len(lines):
+            raise IndexError(f"Cannot access line number {idx}: outside of program")
+        return lines[idx]
 
     def __iter__(self):
         while self.has_next():
