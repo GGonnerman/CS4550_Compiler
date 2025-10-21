@@ -1,0 +1,4 @@
+#!/bin/bash
+
+PROGRAM_CONTENT=$(cat $1)
+./.venv/bin/klein_display_symbol_table "$PROGRAM_CONTENT"

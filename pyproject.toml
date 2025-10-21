@@ -13,6 +13,7 @@ klein_list_tokens = "compiler.__main__:list_tokens"
 klein_parse_program = "compiler.__main__:klein_parse_program"
 klein_ast_to_text = "compiler.__main__:klein_ast_to_text"
 klein_ast_to_dot = "compiler.__main__:klein_ast_to_dot"
+klein_display_symbol_table = "compiler.__main__:klein_display_symbol_table"
 
 [tool.pytest.ini_options]
 addopts = ["--import-mode=importlib"]
