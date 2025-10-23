@@ -1,0 +1,95 @@
+(* Unused function should have warning *)
+function unused_fun(unused_arg: integer): integer (* unused arg should have warning *)
+    1
+
+(* Duplicated function name should raise an error *)
+function duplicated_fun_name(): integer
+    1
+
+function duplicated_fun_name(): integer
+    2
+
+(* Function with duplicated argument name should raise an error *)
+function duplicated_arg_name(a: integer, a: integer): integer
+    1
+
+(* Used defined print function should raise an error *)
+function print(a: integer): integer
+    1
+
+(* Expression being called with wrong typed children should raise an error *)
+function expression_called_with_wrong_children(): boolean
+    print(true + true)
+    print(true - false)
+    print(false * true)
+    print(false / false)
+    print(true < true)
+    print(not 1)
+    print(2 and 3)
+    print(4 or 5)
+
+(* If being called with an integer in place of conditional should raise error *)
+function if_called_with_int_as_conditional(): integer
+    if 1 then 2 else 3
+
+(* If having 2 different values inside of print should *not* raise an error *)
+function if_possible_wrong_return_type(): integer
+    print(if true then 1 else false)
+    1
+
+(* If possibly returning the wrong type should raise error *)
+function if_possible_wrong_return_type(): integer
+    if true then 1 else false
+
+(* Function which claims to return int and returns bool should raise error *)
+function returns_wrong_type_int(): integer
+    true
+
+(* Function which claims to return bool and returns int should raise error *)
+function returns_wrong_type_bool(): boolean
+    1
+
+function i_return_int(): integer
+    1
+
+(* Returning a function which return wrong type should raise error *)
+function return_wrong_type(): boolean
+    i_return_int()
+
+(* Calling a nonexistant funtion should raise error *)
+function calls_nonexistant_fun(): integer
+    print(nonexistant_fun())
+    1
+
+(* Using a nonexistant parameter should raise error *)
+function uses_nonexistant_param(): integer
+    1 + nonexistant_param
+
+(* Having the wrong type of parameter or the wrong amount should raise an error *)
+function Param_call(): integer
+    int_typing(true)
+    bool_typing(1)
+    wrong_param_count(1,2)
+    1
+function bool_typing(wrong_type: boolean): boolean
+    1
+function int_typing(wrong_type:integer): integer
+    1
+function wrong_param_count(param: integer): integer
+    1
+    
+(* Unnecessary function call should have warning *)
+function unneccesarry_function(param: integer): integer
+    int_typing(param)
+
+(* Recursive function should *not* raise error *)
+function recursive_fun(a: integer): integer
+    if a < 1
+    then a
+    else a + recursive_fun(a - 1)
+
+(* Recursive function that never terminates have warning *)
+function recursive_fun(a: integer): integer
+    recursive_fun(a)
+    
+(* Missing a main function should raise an error *)
