@@ -27,6 +27,7 @@ function expression_called_with_wrong_children(): boolean
     print(not 1)
     print(2 and 3)
     print(4 or 5)
+    true
 
 (* If being called with an integer in place of conditional should raise error *)
 function if_called_with_int_as_conditional(): integer
@@ -67,9 +68,9 @@ function uses_nonexistant_param(): integer
 
 (* Having the wrong type of parameter or the wrong amount should raise an error *)
 function Param_call(): integer
-    int_typing(true)
-    bool_typing(1)
-    wrong_param_count(1,2)
+    print(int_typing(true))
+    print(bool_typing(1))
+    print(wrong_param_count(1,2))
     1
 function bool_typing(wrong_type: boolean): boolean
     1
