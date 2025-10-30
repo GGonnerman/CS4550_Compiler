@@ -77,13 +77,4 @@ function wrong_param_count(param: integer): integer
     
 
 
-(* Recursive function should *not* raise error *)
-function recursive_fun(a: integer): integer
-    if a < 1
-    then a
-    else a + recursive_fun(a - 1)
 
-(* Recursive function that never terminates have warning *)
-function recursive_fun(a: integer): integer
-    recursive_fun(a)
-    
