@@ -1,6 +1,6 @@
 import sys
 
-from compiler.ast import display_astnode
+from compiler.ast_nodes import display_astnode
 from compiler.klein_errors import LexicalError, ParseError
 from compiler.parser import Parser
 from compiler.scanner import Scanner

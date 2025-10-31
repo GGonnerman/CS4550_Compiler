@@ -1,29 +1,379 @@
-from ast import Expression
-
-from compiler.ast import (
+from compiler.ast_nodes import (
+    AndExpression,
+    Argument,
+    ArgumentList,
+    ASTNode,
+    Body,
+    BooleanAnnotation,
+    BooleanLiteral,
+    BooleanType,
     Definition,
+    DefinitionList,
+    DivideExpression,
+    EmptyAnnotation,
+    EqualsExpression,
+    ErrorAnnotation,
+    FunctionAnnotation,
+    FunctionCallExpression,
+    Identifier,
+    IdWithType,
+    IfExpression,
+    IntegerAnnotation,
+    IntegerLiteral,
+    IntegerType,
+    LessThanExpression,
+    MinusExpression,
+    NotExpression,
+    OrExpression,
     ParameterList,
+    PlusExpression,
     Program,
+    SequenceAnnotation,
+    TimesExpression,
+    Type,
+    UnaryMinusExpression,
+    UnionAnnotation,
+    display_astnode,
 )
-from compiler.symbol_table import SymbolTable
+from compiler.parser import Parser
+from compiler.scanner import Scanner
+from compiler.symbol_table import Kind, Symbol, SymbolTable
 
 
 class SemanticAnalyzer:
     def __init__(self, ast: Program):
         self.ast: Program = ast
         self.symbol_table: SymbolTable = SymbolTable()
+        self.errors: list[str] = []
+        self._context: str = ""
+        self._current_function: Symbol | None = None
 
-    def analyze(self) -> None:
-        self._program_resolve(self.ast)
+    def _type_to_annotatiton(
+        self,
+        my_type: Type,
+    ) -> IntegerAnnotation | BooleanAnnotation:
+        return (
+            IntegerAnnotation()
+            if isinstance(my_type, IntegerType)
+            else BooleanAnnotation()
+        )
 
-    def _program_resolve(self, program: Program) -> None:
-        raise NotImplementedError
+    def annotate(self):
+        self._create_shallow_symbol_table()
+        self._annotate(self.ast)
+        self.symbol_table.update_backward_references()
 
-    def _definition_resolve(self, definition: Definition) -> None:
-        raise NotImplementedError
+    def _add_error(self, error_message: str):
+        self.errors.append(error_message)
 
-    def _parameter_list_resolve(self, parameter_list: ParameterList) -> None:
-        raise NotImplementedError
+    def _create_shallow_symbol_table(self):
+        self.symbol_table.scope_bind(
+            "print",
+            Symbol(
+                "print",
+                Kind.GLOBAL,
+                FunctionAnnotation(
+                    SequenceAnnotation(
+                        [UnionAnnotation((IntegerAnnotation(), BooleanAnnotation()))],
+                    ),
+                    EmptyAnnotation(),
+                ),
+            ),
+        )
+        seen_function_names: set[str] = set()
+        for definition in self.ast.definition_list:
+            if definition.name.value in seen_function_names:
+                self._add_error(f"Duplicated function name {definition.name.value}")
+                continue
+            seen_function_names.add(definition.name.value)
+            param_annotation = SequenceAnnotation(
+                [
+                    self._type_to_annotatiton(param.type)
+                    for param in definition.parameters
+                ],
+            )
+            return_annotation = self._type_to_annotatiton(definition.return_type)
+            # TODO: Can check if name is already in symbol table before binding
+            # to warn about duplicate name
+            self.symbol_table.scope_bind(
+                definition.name.value,
+                Symbol(
+                    definition.name.value,
+                    Kind.GLOBAL,
+                    FunctionAnnotation(param_annotation, return_annotation),
+                ),
+            )
+        if "main" not in seen_function_names:
+            self._add_error("Missing a main function")
 
-    def _expression_resolve(self, expression: Expression) -> None:
-        raise NotImplementedError
+    def _annotate(self, node: ASTNode):
+        if isinstance(node, Program):
+            self._annotate(node.definition_list)
+        elif isinstance(node, DefinitionList):
+            for definition in node:
+                self._annotate(definition)
+        elif isinstance(node, Definition):
+            self._current_function = self.symbol_table.scope_lookup(node.name.value)
+            self.symbol_table.scope_enter()  # Enter parameter scope
+            self._annotate(node.parameters)
+            self._annotate(node.return_type)
+            # Annotate body and check for mismatch
+            self.symbol_table.scope_enter()  # Enter body scope
+            self._context = f"Fn {node.name.value}: "
+            self._annotate(node.body)
+            self.symbol_table.scope_exit()  # Exit body and parameter scope
+            self.symbol_table.scope_exit()
+            node.add_annotation(
+                FunctionAnnotation(
+                    node.parameters.annotation,
+                    node.return_type.annotation,
+                ),
+            )
+            if node.body.annotation != node.return_type.annotation:
+                self._add_error(
+                    f"Expected function {node.name.value} to return {node.return_type.annotation} instead found {node.body.annotation}",
+                )
+        elif isinstance(node, ParameterList):
+            seen_parameter_names: set[str] = set()
+            for parameter in node:
+                self._annotate(parameter)
+                if parameter.name.value in seen_parameter_names:
+                    self._add_error(
+                        f"{self._context}Duplicated parameter name {parameter.name.value}",
+                    )
+                    continue
+                seen_parameter_names.add(parameter.name.value)
+                self.symbol_table.scope_bind(
+                    parameter.name.value,
+                    Symbol(parameter.name.value, Kind.PARAM, parameter.annotation),
+                )
+            annotation = SequenceAnnotation([param.annotation for param in node])
+            node.add_annotation(annotation)
+
+        elif isinstance(node, IdWithType):
+            self._annotate(node.type)
+            node.add_annotation(node.type.annotation)
+        elif isinstance(node, (IntegerType, IntegerLiteral)):
+            node.add_annotation(IntegerAnnotation())
+        elif isinstance(node, (BooleanType, BooleanLiteral)):
+            node.add_annotation(BooleanAnnotation())
+        elif isinstance(node, Identifier):
+            annotation_type: Symbol | None = self.symbol_table.scope_lookup(node.value)
+            if annotation_type is None:
+                self._add_error(
+                    f"{self._context}Missing identifier {node.value} referenced",
+                )
+                node.add_annotation(ErrorAnnotation())
+                return
+            symbol_type = annotation_type.symbol_type
+            if isinstance(symbol_type, FunctionAnnotation):
+                self._add_error(
+                    f"{self._context}Attempted to use function {annotation_type.name} as variable",
+                )
+                node.add_annotation(ErrorAnnotation())
+                return
+            node.add_annotation(annotation_type.symbol_type)
+        elif isinstance(node, FunctionCallExpression):
+            # TODO: Somehow here we need to add that the current function we are
+            # a part of called (node.function_name.value) as a function into the
+            # symbol table...
+            # Wonder if this should be broken into: annotate definition, annotation expression, etc.
+            self._annotate(node.argument_list)
+            symbol: Symbol | None = self.symbol_table.scope_lookup(
+                node.function_name.value,
+            )
+            if symbol is None:
+                node.add_annotation(ErrorAnnotation())
+                self._add_error(
+                    f"{self._context}Attempted to call non-existant function {node.function_name.value}",
+                )
+                return
+            symbol_type = symbol.symbol_type
+            if not isinstance(symbol_type, FunctionAnnotation):
+                print(symbol)
+                node.add_annotation(ErrorAnnotation())
+                self._add_error(
+                    f"{self._context}Attempted to call parameter {node.function_name.value} as a function",
+                )
+                return
+            if self._current_function is None:
+                # This code *should* be unreachable
+                raise ValueError("Called a function without being in a context")
+            self._current_function.add_forward_reference(symbol.name)
+            if symbol_type.source != node.argument_list.annotation:
+                node.add_annotation(ErrorAnnotation())
+                self._add_error(
+                    f"{self._context}Wrong argument passed to {node.function_name.value}",
+                )
+                return
+            node.add_annotation(
+                symbol_type.destination,
+            )
+        elif isinstance(
+            node,
+            (PlusExpression, MinusExpression, TimesExpression, DivideExpression),
+        ):
+            self._annotate(node.left_side)
+            self._annotate(node.right_side)
+            if node.left_side.annotation != IntegerAnnotation():
+                self._add_error(
+                    f"{self._context}Expect left side of expression to be integer",
+                )
+                node.add_annotation(ErrorAnnotation())
+                return
+            if node.right_side.annotation != IntegerAnnotation():
+                self._add_error(
+                    f"{self._context}Expect right side of expression to be integer",
+                )
+                node.add_annotation(ErrorAnnotation())
+                return
+            node.add_annotation(IntegerAnnotation())
+        elif isinstance(
+            node,
+            (LessThanExpression),
+        ):
+            self._annotate(node.left_side)
+            self._annotate(node.right_side)
+            if node.left_side.annotation != IntegerAnnotation():
+                self._add_error(
+                    f"{self._context}Expect left side of expression to be integer",
+                )
+                node.add_annotation(ErrorAnnotation())
+                return
+            if node.right_side.annotation != IntegerAnnotation():
+                self._add_error(
+                    f"{self._context}Expect right side of expression to be integer",
+                )
+                node.add_annotation(ErrorAnnotation())
+                return
+            node.add_annotation(BooleanAnnotation())
+        elif isinstance(
+            node,
+            (AndExpression, OrExpression),
+        ):
+            self._annotate(node.left_side)
+            self._annotate(node.right_side)
+            if node.left_side.annotation != BooleanAnnotation():
+                self._add_error(
+                    f"{self._context}Expect left side of expression to be boolean",
+                )
+                node.add_annotation(ErrorAnnotation())
+                return
+            if node.right_side.annotation != BooleanAnnotation():
+                self._add_error(
+                    f"{self._context}Expect right side of expression to be boolean",
+                )
+                node.add_annotation(ErrorAnnotation())
+                return
+            node.add_annotation(BooleanAnnotation())
+        elif isinstance(
+            node,
+            (EqualsExpression),
+        ):
+            self._annotate(node.left_side)
+            self._annotate(node.right_side)
+            # FIXME: This 100% has errors when mismatch between like unions or whatnot
+            if (
+                node.left_side.annotation == ErrorAnnotation()
+                or node.right_side.annotation == ErrorAnnotation()
+            ):
+                node.add_annotation(ErrorAnnotation())
+                return
+            node.add_annotation(BooleanAnnotation())
+        elif isinstance(
+            node,
+            (UnaryMinusExpression),
+        ):
+            self._annotate(node.value)
+            if node.value.annotation != IntegerAnnotation():
+                self._add_error(
+                    f"{self._context}Expect value of unary minus expression to be an integer",
+                )
+                node.add_annotation(ErrorAnnotation())
+                return
+            node.add_annotation(IntegerAnnotation())
+        elif isinstance(
+            node,
+            (NotExpression),
+        ):
+            self._annotate(node.value)
+            if node.value.annotation != BooleanAnnotation():
+                self._add_error(
+                    f"{self._context}Expect value of not expression to be a boolean",
+                )
+                node.add_annotation(ErrorAnnotation())
+                return
+            node.add_annotation(BooleanAnnotation())
+        elif isinstance(node, ArgumentList):
+            for argument in node.arguments:
+                self._annotate(argument)
+            node.add_annotation(
+                SequenceAnnotation([arg.annotation for arg in node.arguments]),
+            )
+        elif isinstance(node, IfExpression):
+            self._annotate(node.condition)
+            self._annotate(node.consequent)
+            self._annotate(node.alternative)
+            if node.condition.annotation != BooleanAnnotation():
+                self._add_error(
+                    f"{self._context}Expected condition of if expression to be a boolean",
+                )
+                node.add_annotation(ErrorAnnotation())
+            if node.consequent.annotation != node.alternative.annotation:
+                node.add_annotation(node.consequent.annotation)
+            else:
+                node.add_annotation(
+                    UnionAnnotation(
+                        (node.consequent.annotation, node.alternative.annotation),
+                    ),
+                )
+        elif isinstance(node, Argument):
+            self._annotate(node.value)
+            node.add_annotation(node.value.annotation)
+        elif isinstance(node, Body):
+            for print_expression in node.print_expressions:
+                self._annotate(print_expression)
+            self._annotate(node.body)
+            node.add_annotation(node.body.annotation)
+        else:
+            raise NotImplementedError(
+                f"Annotating nodes of type {node.__class__.__name__} has not been implemented yet",
+            )
+
+    # def analyze(self) -> None:
+    #    self._program_resolve(self.ast)
+
+    # def _program_resolve(self, program: Program) -> None:
+    #    raise NotImplementedError
+
+    # def _definition_resolve(self, definition: Definition) -> None:
+    #    raise NotImplementedError
+
+    # def _parameter_list_resolve(self, parameter_list: ParameterList) -> None:
+    #    raise NotImplementedError
+
+    # def _expression_resolve(self, expression: Expression) -> None:
+    #    raise NotImplementedError
+
+
+if __name__ == "__main__":
+    with open("programs/semantic-errors.kln") as infile:
+        scanner = Scanner(infile.read())
+    # scanner = Scanner("""
+    # function main(): integer
+    #  print(true)
+    #  1
+    # """)
+
+    parser = Parser(scanner)
+
+    ast = parser.parse()
+
+    sa = SemanticAnalyzer(ast)
+    sa.annotate()
+    display_astnode(ast)
+    print()
+    print(str(sa.symbol_table))
+    print()
+    for error in sa.errors:
+        print(f"ERROR: {error}")

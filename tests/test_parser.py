@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from compiler.ast import (
+from compiler.ast_nodes import (
     AndExpression,
     Argument,
     ArgumentList,

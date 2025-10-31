@@ -1,9 +1,9 @@
 import sys
 
-from compiler.ast import display_astnode
 from compiler.klein_errors import LexicalError, ParseError
 from compiler.parser import Parser
 from compiler.scanner import Scanner
+from compiler.semantic_analyzer import SemanticAnalyzer
 
 
 def display_symbol_table():
@@ -11,10 +11,11 @@ def display_symbol_table():
     scanner = Scanner(program)
     parser = Parser(scanner)
 
-    raise NotImplementedError("Display a symbol table is not yet implement")
     try:
         ast = parser.parse()
-        display_astnode(ast)
+        analyzer = SemanticAnalyzer(ast)
+        analyzer.annotate()
+        print(analyzer.symbol_table)
     except LexicalError as e:
         print(e)
     except ParseError as e:

@@ -14,8 +14,10 @@ function duplicated_arg_name(a: integer, a: integer): integer
     1
 
 (* Used defined print function should raise an error *)
+(* Our parser does not even allow a function with the name print to exist
+So, we cannot test this at this stage.
 function print(a: integer): integer
-    1
+    1 *)
 
 (* Expression being called with wrong typed children should raise an error *)
 function expression_called_with_wrong_children(): boolean
@@ -34,12 +36,12 @@ function if_called_with_int_as_conditional(): integer
     if 1 then 2 else 3
 
 (* If having 2 different values inside of print should *not* raise an error *)
-function if_possible_wrong_return_type(): integer
+function if_possible_wrong_return_type_print(): integer
     print(if true then 1 else false)
     1
 
 (* If possibly returning the wrong type should raise error *)
-function if_possible_wrong_return_type(): integer
+function if_possible_wrong_return_type_return(): integer
     if true then 1 else false
 
 (* Function which claims to return int and returns bool should raise error *)
@@ -66,6 +68,14 @@ function calls_nonexistant_fun(): integer
 function uses_nonexistant_param(): integer
     1 + nonexistant_param
 
+(* Using a function as an identifier should raise error *)
+function uses_function_as_identififer(): integer
+    1 + uses_function_as_identififer
+
+(* Addition error should bubble-up cleanly with 1 error at root and 1 at return value *)
+function error_bubbles_cleanly(): integer
+    false + 2 + 3 + 4 + 5
+
 (* Having the wrong type of parameter or the wrong amount should raise an error *)
 function Param_call(): integer
     print(int_typing(true))
@@ -90,7 +100,7 @@ function recursive_fun(a: integer): integer
     else a + recursive_fun(a - 1)
 
 (* Recursive function that never terminates have warning *)
-function recursive_fun(a: integer): integer
-    recursive_fun(a)
+function nonterminating_recursive_fun(a: integer): integer
+    nonterminating_recursive_fun(a)
     
 (* Missing a main function should raise an error *)

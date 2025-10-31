@@ -4,7 +4,7 @@ from io import TextIOWrapper
 
 from typing_extensions import override
 
-from compiler.ast import SemanticAction
+from compiler.ast_nodes import SemanticAction
 from compiler.tokens import TokenType
 
 

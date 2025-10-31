@@ -1,6 +1,6 @@
 import sys
 
-from compiler.ast import astnode_to_dot
+from compiler.ast_nodes import astnode_to_dot
 from compiler.klein_errors import LexicalError, ParseError
 from compiler.parser import Parser
 from compiler.scanner import Scanner
