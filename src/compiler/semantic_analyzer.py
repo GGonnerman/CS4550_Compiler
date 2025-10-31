@@ -1,4 +1,7 @@
+from dataclasses import dataclass
 from enum import Enum, auto
+
+from typing_extensions import override
 
 from compiler.ast_nodes import (
     AndExpression,
@@ -48,13 +51,24 @@ class IssueType(Enum):
     WARNING = auto()
 
 
+@dataclass
+class Context:
+    printable: str
+    function: Symbol
+    parameters: set[str]
+    used_parameters: set[str]
+
+    @override
+    def __str__(self) -> str:
+        return self.printable
+
+
 class SemanticAnalyzer:
     def __init__(self, ast: Program):
         self.ast: Program = ast
         self.symbol_table: SymbolTable = SymbolTable()
         self.issues: list[tuple[IssueType, str]] = []
-        self._context: str = ""
-        self._current_function: Symbol | None = None
+        self._context: Context | None = None
 
     @property
     def error_count(self):
@@ -147,21 +161,26 @@ class SemanticAnalyzer:
             for definition in node:
                 self._annotate(definition)
         elif isinstance(node, Definition):
-            self._current_function = self.symbol_table.scope_lookup(node.name.value)
+            current_function = self.symbol_table.scope_lookup(node.name.value)
+            if current_function is None:
+                raise ValueError(f"Inside of unbound function {node.name.value}")
             self.symbol_table.scope_enter()  # Enter parameter scope
             self._annotate(node.parameters)
             self._annotate(node.return_type)
             # Annotate body and check for mismatch
             self.symbol_table.scope_enter()  # Enter body scope
-            self._context = f"Function {node.name.value}: "
+            self._context = Context(
+                f"Function {node.name.value}: ",
+                current_function,
+                set(parameter.name.value for parameter in node.parameters),
+                set(),
+            )
             self._annotate(node.body)
-            self.symbol_table.update_backward_references()
             # Checking for unused parameters
-            for parameter_symbol in self.symbol_table.at(-2).values():
-                if len(parameter_symbol.backward_references) == 0:
-                    self._add_warning(
-                        f"{self._context}Unused parameter {parameter_symbol.name}",
-                    )
+            for parameter in self._context.parameters - self._context.used_parameters:
+                self._add_warning(
+                    f"{self._context}Unused parameter {parameter}",
+                )
             self.symbol_table.scope_exit()  # Exit body and parameter scope
             self.symbol_table.scope_exit()
             node.add_annotation(
@@ -213,6 +232,10 @@ class SemanticAnalyzer:
                 )
                 node.add_annotation(ErrorAnnotation())
                 return
+            if self._context is None:
+                # This code *should* be unreachable
+                raise ValueError("Referenced identifier without being in a context")
+            self._context.used_parameters.add(node.value)
             node.add_annotation(annotation_type.symbol_type)
         elif isinstance(node, FunctionCallExpression):
             # TODO: Somehow here we need to add that the current function we are
@@ -237,10 +260,10 @@ class SemanticAnalyzer:
                     f"{self._context}Attempted to call parameter {node.function_name.value} as a function",
                 )
                 return
-            if self._current_function is None:
+            if self._context is None:
                 # This code *should* be unreachable
                 raise ValueError("Called a function without being in a context")
-            self._current_function.add_forward_reference(symbol.name)
+            self._context.function.add_forward_reference(symbol.name)
             passed_arguments = node.argument_list.annotation
             expected_arguments = symbol_type.source
             if passed_arguments != expected_arguments:

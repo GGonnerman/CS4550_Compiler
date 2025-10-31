@@ -154,7 +154,7 @@ class UnionAnnotation(AnnotationType):
 
     @override
     def __str__(self) -> str:
-        return " OR ".join([str(option) for option in self.options])
+        return "{" + " OR ".join([str(option) for option in self.options]) + "}"
 
 
 class ErrorAnnotation(AnnotationType):
