@@ -1,3 +1,5 @@
+from enum import Enum, auto
+
 from compiler.ast_nodes import (
     AndExpression,
     Argument,
@@ -35,18 +37,32 @@ from compiler.ast_nodes import (
     UnionAnnotation,
     display_astnode,
 )
+from compiler.klein_errors import SemanticError
 from compiler.parser import Parser
 from compiler.scanner import Scanner
 from compiler.symbol_table import Kind, Symbol, SymbolTable
+
+
+class IssueType(Enum):
+    ERROR = auto()
+    WARNING = auto()
 
 
 class SemanticAnalyzer:
     def __init__(self, ast: Program):
         self.ast: Program = ast
         self.symbol_table: SymbolTable = SymbolTable()
-        self.errors: list[str] = []
+        self.issues: list[tuple[IssueType, str]] = []
         self._context: str = ""
         self._current_function: Symbol | None = None
+
+    @property
+    def error_count(self):
+        return len([issue for issue in self.issues if issue[0] == IssueType.ERROR])
+
+    @property
+    def warning_count(self):
+        return len([issue for issue in self.issues if issue[0] == IssueType.WARNING])
 
     def _type_to_annotatiton(
         self,
@@ -62,9 +78,27 @@ class SemanticAnalyzer:
         self._create_shallow_symbol_table()
         self._annotate(self.ast)
         self.symbol_table.update_backward_references()
+        self._check_function_warnings()
+        for issue_type, issue in self.issues:
+            issue_title = "Warning" if issue_type == IssueType.WARNING else "Error"
+            print(f"Klein Semantic {issue_title}: {issue}")
+        if self.error_count > 0:
+            raise SemanticError(
+                f"Encountered {self.error_count} errors when analyzing ast",
+            )
+
+    def _check_function_warnings(self):
+        for symbol in self.symbol_table:
+            if symbol.name in ("main", "print"):
+                continue
+            if len(symbol.backward_references) == 0:
+                self._add_warning(f"Unused function {symbol.name}")
 
     def _add_error(self, error_message: str):
-        self.errors.append(error_message)
+        self.issues.append((IssueType.ERROR, error_message))
+
+    def _add_warning(self, warning_message: str):
+        self.issues.append((IssueType.WARNING, warning_message))
 
     def _create_shallow_symbol_table(self):
         self.symbol_table.scope_bind(
@@ -119,8 +153,15 @@ class SemanticAnalyzer:
             self._annotate(node.return_type)
             # Annotate body and check for mismatch
             self.symbol_table.scope_enter()  # Enter body scope
-            self._context = f"Fn {node.name.value}: "
+            self._context = f"Function {node.name.value}: "
             self._annotate(node.body)
+            self.symbol_table.update_backward_references()
+            # Checking for unused parameters
+            for parameter_symbol in self.symbol_table.at(-2).values():
+                if len(parameter_symbol.backward_references) == 0:
+                    self._add_warning(
+                        f"{self._context}Unused parameter {parameter_symbol.name}",
+                    )
             self.symbol_table.scope_exit()  # Exit body and parameter scope
             self.symbol_table.scope_exit()
             node.add_annotation(
@@ -200,11 +241,30 @@ class SemanticAnalyzer:
                 # This code *should* be unreachable
                 raise ValueError("Called a function without being in a context")
             self._current_function.add_forward_reference(symbol.name)
-            if symbol_type.source != node.argument_list.annotation:
+            passed_arguments = node.argument_list.annotation
+            expected_arguments = symbol_type.source
+            if passed_arguments != expected_arguments:
                 node.add_annotation(ErrorAnnotation())
-                self._add_error(
-                    f"{self._context}Wrong argument passed to {node.function_name.value}",
-                )
+                if not isinstance(
+                    passed_arguments,
+                    SequenceAnnotation,
+                ) or not isinstance(expected_arguments, SequenceAnnotation):
+                    self._add_error(
+                        f"{self._context}Wrong argument passed to {node.function_name.value}",
+                    )
+                    return
+                if len(passed_arguments) > len(expected_arguments):
+                    self._add_error(
+                        f"{self._context}Too many arguments passed to {node.function_name.value}. Expected {len(expected_arguments)} and receieved {len(passed_arguments)}",
+                    )
+                elif len(passed_arguments) < len(expected_arguments):
+                    self._add_error(
+                        f"{self._context}Too few arguments passed to {node.function_name.value}. Expected {len(expected_arguments)} and receieved {len(passed_arguments)}",
+                    )
+                else:
+                    self._add_error(
+                        f"{self._context}Mismatched argument types passed to {node.function_name.value}. Expected {expected_arguments} and received {passed_arguments}",
+                    )
                 return
             node.add_annotation(
                 symbol_type.destination,
@@ -217,13 +277,13 @@ class SemanticAnalyzer:
             self._annotate(node.right_side)
             if node.left_side.annotation != IntegerAnnotation():
                 self._add_error(
-                    f"{self._context}Expect left side of expression to be integer",
+                    f"{self._context}Expected left side of {node} to be Integer instead found {node.left_side.annotation}",
                 )
                 node.add_annotation(ErrorAnnotation())
                 return
             if node.right_side.annotation != IntegerAnnotation():
                 self._add_error(
-                    f"{self._context}Expect right side of expression to be integer",
+                    f"{self._context}Expected right side of {node} to be Integer instead found {node.right_side.annotation}",
                 )
                 node.add_annotation(ErrorAnnotation())
                 return
@@ -236,13 +296,13 @@ class SemanticAnalyzer:
             self._annotate(node.right_side)
             if node.left_side.annotation != IntegerAnnotation():
                 self._add_error(
-                    f"{self._context}Expect left side of expression to be integer",
+                    f"{self._context}Expected left side of {node} to be Integer instead found {node.left_side.annotation}",
                 )
                 node.add_annotation(ErrorAnnotation())
                 return
             if node.right_side.annotation != IntegerAnnotation():
                 self._add_error(
-                    f"{self._context}Expect right side of expression to be integer",
+                    f"{self._context}Expected right side of {node} to be Integer instead found {node.right_side.annotation}",
                 )
                 node.add_annotation(ErrorAnnotation())
                 return
@@ -255,13 +315,13 @@ class SemanticAnalyzer:
             self._annotate(node.right_side)
             if node.left_side.annotation != BooleanAnnotation():
                 self._add_error(
-                    f"{self._context}Expect left side of expression to be boolean",
+                    f"{self._context}Expected left side of {node} to be Boolean instead found {node.left_side.annotation}",
                 )
                 node.add_annotation(ErrorAnnotation())
                 return
             if node.right_side.annotation != BooleanAnnotation():
                 self._add_error(
-                    f"{self._context}Expect right side of expression to be boolean",
+                    f"{self._context}Expected right side of {node} to be Boolean instead found {node.right_side.annotation}",
                 )
                 node.add_annotation(ErrorAnnotation())
                 return
@@ -272,7 +332,7 @@ class SemanticAnalyzer:
         ):
             self._annotate(node.left_side)
             self._annotate(node.right_side)
-            # FIXME: This 100% has errors when mismatch between like unions or whatnot
+            # FIXME: This 99% has errors when mismatch between like unions or whatnot
             if (
                 node.left_side.annotation == ErrorAnnotation()
                 or node.right_side.annotation == ErrorAnnotation()
@@ -287,7 +347,7 @@ class SemanticAnalyzer:
             self._annotate(node.value)
             if node.value.annotation != IntegerAnnotation():
                 self._add_error(
-                    f"{self._context}Expect value of unary minus expression to be an integer",
+                    f"{self._context}Expected value of {node} to be an Integer instead found {node.value.annotation}",
                 )
                 node.add_annotation(ErrorAnnotation())
                 return
@@ -299,7 +359,7 @@ class SemanticAnalyzer:
             self._annotate(node.value)
             if node.value.annotation != BooleanAnnotation():
                 self._add_error(
-                    f"{self._context}Expect value of not expression to be a boolean",
+                    f"{self._context}Expected value of {node} to be a Boolean instead found {node.value.annotation}",
                 )
                 node.add_annotation(ErrorAnnotation())
                 return
@@ -316,10 +376,10 @@ class SemanticAnalyzer:
             self._annotate(node.alternative)
             if node.condition.annotation != BooleanAnnotation():
                 self._add_error(
-                    f"{self._context}Expected condition of if expression to be a boolean",
+                    f"{self._context}Expected condition of {node} to be a Boolean instead found {node.condition.annotation}",
                 )
                 node.add_annotation(ErrorAnnotation())
-            if node.consequent.annotation != node.alternative.annotation:
+            if node.consequent.annotation == node.alternative.annotation:
                 node.add_annotation(node.consequent.annotation)
             else:
                 node.add_annotation(
@@ -374,6 +434,3 @@ if __name__ == "__main__":
     display_astnode(ast)
     print()
     print(str(sa.symbol_table))
-    print()
-    for error in sa.errors:
-        print(f"ERROR: {error}")

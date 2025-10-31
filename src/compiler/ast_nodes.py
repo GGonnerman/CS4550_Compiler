@@ -75,6 +75,9 @@ class SemanticAction(StrEnum):
 class AnnotationType(ABC):
     @override
     def __eq__(self, value: object, /) -> bool:
+        # FIXME: Bug dependent on whether union eq is has override
+        if isinstance(value, UnionAnnotation):
+            return self in value
         return self.__class__ == value.__class__
 
 
@@ -94,10 +97,6 @@ class BooleanAnnotation(AnnotationType):
     @override
     def __str__(self) -> str:
         return "Boolean"
-
-    @override
-    def __eq__(self, value: object, /) -> bool:
-        return self.__class__ == value.__class__
 
 
 class SequenceAnnotation(AnnotationType):
@@ -144,13 +143,18 @@ class UnionAnnotation(AnnotationType):
     def __init__(self, options: Iterable[AnnotationType]):
         self.options: Iterable[AnnotationType] = options
 
-    @override
-    def __str__(self) -> str:
-        return " OR ".join([str(option) for option in self.options])
+    def __contains__(self, value: AnnotationType):
+        return value in self.options
 
     @override
     def __eq__(self, other: object) -> bool:
-        return any(option == other for option in self.options)
+        if isinstance(other, UnionAnnotation):
+            return all(option in other for option in self.options)
+        return False
+
+    @override
+    def __str__(self) -> str:
+        return " OR ".join([str(option) for option in self.options])
 
 
 class ErrorAnnotation(AnnotationType):

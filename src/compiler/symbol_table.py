@@ -42,10 +42,23 @@ class SymbolTable:
     def __init__(self):
         self._scope_stack: list[dict[str, Symbol]] = [{}]
 
+    def __iter__(self):
+        for scope in self._scope_stack:
+            for symbol in scope.values():
+                yield symbol
+
+    def at(self, scope: int):
+        return self._scope_stack[scope]
+
     def update_backward_references(self):
-        for symbol in self._scope_stack[0].values():
+        for symbol in self:
             for called_function_name in symbol.forward_references:
-                self._scope_stack[0][called_function_name].add_backward_reference(
+                called_function = self.scope_lookup(called_function_name)
+                if called_function is None:
+                    raise ValueError(
+                        f"Trying to update backreference from {symbol.name} to non-existant function {called_function_name}",
+                    )
+                called_function.add_backward_reference(
                     symbol.name,
                 )
 

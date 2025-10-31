@@ -1,6 +1,6 @@
 import sys
 
-from compiler.klein_errors import LexicalError, ParseError
+from compiler.klein_errors import LexicalError, ParseError, SemanticError
 from compiler.parser import Parser
 from compiler.scanner import Scanner
 from compiler.semantic_analyzer import SemanticAnalyzer
@@ -19,6 +19,8 @@ def display_symbol_table():
     except LexicalError as e:
         print(e)
     except ParseError as e:
+        print(e)
+    except SemanticError as e:
         print(e)
     except Exception:
         print("Klein Error: unable to continue processing")
