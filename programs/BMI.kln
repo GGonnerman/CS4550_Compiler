@@ -1,6 +1,6 @@
 (* This program calculates BMI*)
 
-function BMI(height_inches : integer, weight : integer): integer
+function BMI(height : integer, weight : integer): integer
     print(sqr_height(height) * weight)
     sqr_height(height) * weight
 

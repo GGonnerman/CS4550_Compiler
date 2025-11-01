@@ -27,9 +27,8 @@ class KleinError(Exception):
                 continue
             break
 
-        # TODO: Changed this to a +2 to make it work properly, but need to determine
-        # why that was necessary...
-        display_position += 2  # This account for 0 vs 1 indexing
+        # TODO: In some cases edge, this is off by one
+        display_position += 1  # This account for 0 vs 1 indexing
         return "\n".join(
             [
                 "\n".join(line_with_indicators),

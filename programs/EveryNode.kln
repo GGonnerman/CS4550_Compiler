@@ -10,3 +10,8 @@ function iReturnInteger(a : integer, b : integer, c : boolean): integer
     then iReturnInteger(a, b+1, true)
     else
       a + a / b * -a = a
+
+function main(): integer
+    print(iReturnBoolean())
+    print(iReturnInteger(1, 2, true))
+    1

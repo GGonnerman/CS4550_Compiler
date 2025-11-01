@@ -1,0 +1,155 @@
+print
+	symbol_type = ({Integer OR Boolean}) -> None
+	functions that call it = Param_call, union_print_type, calls_nonexistant_fun, expression_called_with_wrong_children
+unused_fun
+	symbol_type = (Integer) -> Integer
+	parameters = unused_arg: Integer
+duplicated_fun_name
+	symbol_type = () -> Integer
+duplicated_arg_name
+	symbol_type = (Integer, Integer) -> Integer
+	parameters = a: Integer, a: Integer
+expression_called_with_wrong_children
+	symbol_type = () -> Boolean
+	functions it calls = print
+if_called_with_int_as_conditional
+	symbol_type = () -> Integer
+union_print_type
+	symbol_type = () -> Integer
+	functions it calls = print
+if_possible_wrong_return_type_return
+	symbol_type = () -> Integer
+returns_wrong_type_int
+	symbol_type = () -> Integer
+returns_wrong_type_bool
+	symbol_type = () -> Boolean
+i_return_int
+	symbol_type = () -> Integer
+	functions that call it = return_wrong_type
+return_wrong_type
+	symbol_type = () -> Boolean
+	functions it calls = i_return_int
+calls_nonexistant_fun
+	symbol_type = () -> Integer
+	functions it calls = print
+calls_param_as_fun
+	symbol_type = (Integer) -> Integer
+	parameters = int_param: Integer
+uses_nonexistant_param
+	symbol_type = () -> Integer
+uses_function_as_identififer
+	symbol_type = () -> Integer
+error_bubbles_cleanly
+	symbol_type = () -> Integer
+Param_call
+	symbol_type = () -> Integer
+	functions it calls = int_typing, print, too_few_param, sequential_typing, too_many_param, bool_typing
+bool_typing
+	symbol_type = (Boolean) -> Boolean
+	parameters = wrong_type: Boolean
+	functions that call it = Param_call
+int_typing
+	symbol_type = (Integer) -> Integer
+	parameters = wrong_type: Integer
+	functions that call it = Param_call
+sequential_typing
+	symbol_type = (Integer, Boolean, Boolean) -> Integer
+	parameters = a: Integer, b: Boolean, c: Boolean
+	functions that call it = Param_call
+too_many_param
+	symbol_type = (Integer) -> Integer
+	parameters = a: Integer
+	functions that call it = Param_call
+too_few_param
+	symbol_type = (Integer, Integer, Integer) -> Integer
+	parameters = a: Integer, b: Integer, c: Integer
+	functions that call it = Param_call
+recursive_fun
+	symbol_type = (Integer) -> Integer
+	parameters = a: Integer
+	functions it calls = recursive_fun
+	functions that call it = recursive_fun
+Klein Semantic Error: Duplicated function name duplicated_fun_name
+Klein Semantic Error: Missing a main function
+Klein Semantic Warning: Function unused_fun: Unused parameter unused_arg
+Klein Semantic Error: Function duplicated_arg_name: Duplicated parameter name a
+Klein Semantic Warning: Function duplicated_arg_name: Unused parameter a
+Klein Semantic Error: Function expression_called_with_wrong_children: Expected left side of PlusExpression to be Integer instead found Boolean
+Klein Semantic Error: Function expression_called_with_wrong_children: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Error: Function expression_called_with_wrong_children: Expected right side of PlusExpression to be Integer instead found Boolean
+Klein Semantic Error: Function expression_called_with_wrong_children: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Error: Function expression_called_with_wrong_children: Expected left side of MinusExpression to be Integer instead found Boolean
+Klein Semantic Error: Function expression_called_with_wrong_children: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Error: Function expression_called_with_wrong_children: Expected right side of MinusExpression to be Integer instead found Boolean
+Klein Semantic Error: Function expression_called_with_wrong_children: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Error: Function expression_called_with_wrong_children: Expected left side of TimesExpression to be Integer instead found Boolean
+Klein Semantic Error: Function expression_called_with_wrong_children: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Error: Function expression_called_with_wrong_children: Expected right side of TimesExpression to be Integer instead found Boolean
+Klein Semantic Error: Function expression_called_with_wrong_children: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Error: Function expression_called_with_wrong_children: Expected left side of DivideExpression to be Integer instead found Boolean
+Klein Semantic Error: Function expression_called_with_wrong_children: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Error: Function expression_called_with_wrong_children: Expected right side of DivideExpression to be Integer instead found Boolean
+Klein Semantic Error: Function expression_called_with_wrong_children: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Error: Function expression_called_with_wrong_children: Expected left side of LessThanExpression to be Integer instead found Boolean
+Klein Semantic Error: Function expression_called_with_wrong_children: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Error: Function expression_called_with_wrong_children: Expected right side of LessThanExpression to be Integer instead found Boolean
+Klein Semantic Error: Function expression_called_with_wrong_children: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Error: Function expression_called_with_wrong_children: Expected value of NotExpression to be Boolean instead found Integer
+Klein Semantic Error: Function expression_called_with_wrong_children: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Error: Function expression_called_with_wrong_children: Expected left side of AndExpression to be Boolean instead found Integer
+Klein Semantic Error: Function expression_called_with_wrong_children: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Error: Function expression_called_with_wrong_children: Expected right side of AndExpression to be Boolean instead found Integer
+Klein Semantic Error: Function expression_called_with_wrong_children: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Error: Function expression_called_with_wrong_children: Expected left side of OrExpression to be Boolean instead found Integer
+Klein Semantic Error: Function expression_called_with_wrong_children: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Error: Function expression_called_with_wrong_children: Expected right side of OrExpression to be Boolean instead found Integer
+Klein Semantic Error: Function expression_called_with_wrong_children: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Error: Function if_called_with_int_as_conditional: Expected condition of IfExpression to be Boolean instead found Integer
+Klein Semantic Error: Expected function if_called_with_int_as_conditional to return Integer instead found Error
+Klein Semantic Error: Expected function if_possible_wrong_return_type_return to return Integer instead found {Integer OR Boolean}
+Klein Semantic Error: Expected function returns_wrong_type_int to return Integer instead found Boolean
+Klein Semantic Error: Expected function returns_wrong_type_bool to return Boolean instead found Integer
+Klein Semantic Error: Expected function return_wrong_type to return Boolean instead found Integer
+Klein Semantic Error: Function calls_nonexistant_fun: Attempted to call non-existant function nonexistant_fun
+Klein Semantic Error: Function calls_nonexistant_fun: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Error: Function calls_param_as_fun: Attempted to call parameter int_param as a function
+Klein Semantic Warning: Function calls_param_as_fun: Unused parameter int_param
+Klein Semantic Error: Expected function calls_param_as_fun to return Integer instead found Error
+Klein Semantic Error: Function uses_nonexistant_param: Missing identifier nonexistant_param referenced
+Klein Semantic Error: Function uses_nonexistant_param: Expected right side of PlusExpression to be Integer instead found Error
+Klein Semantic Error: Expected function uses_nonexistant_param to return Integer instead found Error
+Klein Semantic Error: Function uses_function_as_identififer: Attempted to use function uses_function_as_identififer as identifier
+Klein Semantic Error: Function uses_function_as_identififer: Expected right side of PlusExpression to be Integer instead found Error
+Klein Semantic Error: Expected function uses_function_as_identififer to return Integer instead found Error
+Klein Semantic Error: Function error_bubbles_cleanly: Expected left side of PlusExpression to be Integer instead found Boolean
+Klein Semantic Error: Function error_bubbles_cleanly: Expected left side of PlusExpression to be Integer instead found Error
+Klein Semantic Error: Function error_bubbles_cleanly: Expected left side of PlusExpression to be Integer instead found Error
+Klein Semantic Error: Function error_bubbles_cleanly: Expected left side of PlusExpression to be Integer instead found Error
+Klein Semantic Error: Expected function error_bubbles_cleanly to return Integer instead found Error
+Klein Semantic Error: Function Param_call: Mismatched argument types passed to int_typing. Expected (Integer) and received (Boolean)
+Klein Semantic Error: Function Param_call: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Error: Function Param_call: Mismatched argument types passed to bool_typing. Expected (Boolean) and received (Integer)
+Klein Semantic Error: Function Param_call: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Error: Function Param_call: Mismatched argument types passed to sequential_typing. Expected (Integer, Boolean, Boolean) and received (Integer, Integer, Boolean)
+Klein Semantic Error: Function Param_call: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Error: Function Param_call: Too many arguments passed to too_many_param. Expected 1 and receieved 2
+Klein Semantic Error: Function Param_call: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Error: Function Param_call: Too few arguments passed to too_few_param. Expected 3 and receieved 2
+Klein Semantic Error: Function Param_call: Mismatched argument types passed to print. Expected ({Integer OR Boolean}) and received (Error)
+Klein Semantic Warning: Unused function unused_fun
+Klein Semantic Warning: Unused function duplicated_fun_name
+Klein Semantic Warning: Unused function duplicated_arg_name
+Klein Semantic Warning: Unused function expression_called_with_wrong_children
+Klein Semantic Warning: Unused function if_called_with_int_as_conditional
+Klein Semantic Warning: Unused function union_print_type
+Klein Semantic Warning: Unused function if_possible_wrong_return_type_return
+Klein Semantic Warning: Unused function returns_wrong_type_int
+Klein Semantic Warning: Unused function returns_wrong_type_bool
+Klein Semantic Warning: Unused function return_wrong_type
+Klein Semantic Warning: Unused function calls_nonexistant_fun
+Klein Semantic Warning: Unused function calls_param_as_fun
+Klein Semantic Warning: Unused function uses_nonexistant_param
+Klein Semantic Warning: Unused function uses_function_as_identififer
+Klein Semantic Warning: Unused function error_bubbles_cleanly
+Klein Semantic Warning: Unused function Param_call
+Klein Semantic Error: Encountered 64 errors when analyzing ast

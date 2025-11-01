@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum, auto
 
-from typing_extensions import override
-
 from compiler.ast_nodes import (
     AndExpression,
     Argument,
@@ -53,14 +51,9 @@ class IssueType(Enum):
 
 @dataclass
 class Context:
-    printable: str
     function: Symbol
     parameters: set[str]
     used_parameters: set[str]
-
-    @override
-    def __str__(self) -> str:
-        return self.printable
 
 
 class SemanticAnalyzer:
@@ -69,6 +62,7 @@ class SemanticAnalyzer:
         self.symbol_table: SymbolTable = SymbolTable()
         self.issues: list[tuple[IssueType, str]] = []
         self._context: Context | None = None
+        self._printable_context: str | None = None
 
     @property
     def error_count(self):
@@ -93,13 +87,16 @@ class SemanticAnalyzer:
         self._annotate(self.ast)
         self.symbol_table.update_backward_references()
         self._check_function_warnings()
+        if self.error_count > 0:
+            is_plural = self.error_count > 1
+            raise SemanticError(
+                f"Encountered {self.error_count} error{'s' if is_plural else ''} when analyzing ast",
+            )
+
+    def display_issues(self):
         for issue_type, issue in self.issues:
             issue_title = "Warning" if issue_type == IssueType.WARNING else "Error"
             print(f"Klein Semantic {issue_title}: {issue}")
-        if self.error_count > 0:
-            raise SemanticError(
-                f"Encountered {self.error_count} errors when analyzing ast",
-            )
 
     def _check_function_warnings(self):
         for symbol in self.symbol_table:
@@ -134,21 +131,25 @@ class SemanticAnalyzer:
                 self._add_error(f"Duplicated function name {definition.name.value}")
                 continue
             seen_function_names.add(definition.name.value)
+            parameter_symbols: list[Symbol] = [
+                Symbol(
+                    parameter.name.value,
+                    Kind.PARAM,
+                    self._type_to_annotatiton(parameter.type),
+                )
+                for parameter in definition.parameters
+            ]
             param_annotation = SequenceAnnotation(
-                [
-                    self._type_to_annotatiton(param.type)
-                    for param in definition.parameters
-                ],
+                [parameter.symbol_type for parameter in parameter_symbols],
             )
             return_annotation = self._type_to_annotatiton(definition.return_type)
-            # TODO: Can check if name is already in symbol table before binding
-            # to warn about duplicate name
             self.symbol_table.scope_bind(
                 definition.name.value,
                 Symbol(
                     definition.name.value,
                     Kind.GLOBAL,
                     FunctionAnnotation(param_annotation, return_annotation),
+                    parameter_symbols,
                 ),
             )
         if "main" not in seen_function_names:
@@ -164,13 +165,13 @@ class SemanticAnalyzer:
             current_function = self.symbol_table.scope_lookup(node.name.value)
             if current_function is None:
                 raise ValueError(f"Inside of unbound function {node.name.value}")
+            self._printable_context = f"Function {node.name.value}: "
             self.symbol_table.scope_enter()  # Enter parameter scope
             self._annotate(node.parameters)
             self._annotate(node.return_type)
             # Annotate body and check for mismatch
             self.symbol_table.scope_enter()  # Enter body scope
             self._context = Context(
-                f"Function {node.name.value}: ",
                 current_function,
                 set(parameter.name.value for parameter in node.parameters),
                 set(),
@@ -179,7 +180,7 @@ class SemanticAnalyzer:
             # Checking for unused parameters
             for parameter in self._context.parameters - self._context.used_parameters:
                 self._add_warning(
-                    f"{self._context}Unused parameter {parameter}",
+                    f"{self._printable_context}Unused parameter {parameter}",
                 )
             self.symbol_table.scope_exit()  # Exit body and parameter scope
             self.symbol_table.scope_exit()
@@ -199,7 +200,7 @@ class SemanticAnalyzer:
                 self._annotate(parameter)
                 if parameter.name.value in seen_parameter_names:
                     self._add_error(
-                        f"{self._context}Duplicated parameter name {parameter.name.value}",
+                        f"{self._printable_context}Duplicated parameter name {parameter.name.value}",
                     )
                     continue
                 seen_parameter_names.add(parameter.name.value)
@@ -221,14 +222,14 @@ class SemanticAnalyzer:
             annotation_type: Symbol | None = self.symbol_table.scope_lookup(node.value)
             if annotation_type is None:
                 self._add_error(
-                    f"{self._context}Missing identifier {node.value} referenced",
+                    f"{self._printable_context}Missing identifier {node.value} referenced",
                 )
                 node.add_annotation(ErrorAnnotation())
                 return
             symbol_type = annotation_type.symbol_type
             if isinstance(symbol_type, FunctionAnnotation):
                 self._add_error(
-                    f"{self._context}Attempted to use function {annotation_type.name} as variable",
+                    f"{self._printable_context}Attempted to use function {annotation_type.name} as identifier",
                 )
                 node.add_annotation(ErrorAnnotation())
                 return
@@ -238,10 +239,6 @@ class SemanticAnalyzer:
             self._context.used_parameters.add(node.value)
             node.add_annotation(annotation_type.symbol_type)
         elif isinstance(node, FunctionCallExpression):
-            # TODO: Somehow here we need to add that the current function we are
-            # a part of called (node.function_name.value) as a function into the
-            # symbol table...
-            # Wonder if this should be broken into: annotate definition, annotation expression, etc.
             self._annotate(node.argument_list)
             symbol: Symbol | None = self.symbol_table.scope_lookup(
                 node.function_name.value,
@@ -249,15 +246,14 @@ class SemanticAnalyzer:
             if symbol is None:
                 node.add_annotation(ErrorAnnotation())
                 self._add_error(
-                    f"{self._context}Attempted to call non-existant function {node.function_name.value}",
+                    f"{self._printable_context}Attempted to call non-existant function {node.function_name.value}",
                 )
                 return
             symbol_type = symbol.symbol_type
             if not isinstance(symbol_type, FunctionAnnotation):
-                print(symbol)
                 node.add_annotation(ErrorAnnotation())
                 self._add_error(
-                    f"{self._context}Attempted to call parameter {node.function_name.value} as a function",
+                    f"{self._printable_context}Attempted to call parameter {node.function_name.value} as a function",
                 )
                 return
             if self._context is None:
@@ -273,20 +269,20 @@ class SemanticAnalyzer:
                     SequenceAnnotation,
                 ) or not isinstance(expected_arguments, SequenceAnnotation):
                     self._add_error(
-                        f"{self._context}Wrong argument passed to {node.function_name.value}",
+                        f"{self._printable_context}Wrong argument passed to {node.function_name.value}",
                     )
                     return
                 if len(passed_arguments) > len(expected_arguments):
                     self._add_error(
-                        f"{self._context}Too many arguments passed to {node.function_name.value}. Expected {len(expected_arguments)} and receieved {len(passed_arguments)}",
+                        f"{self._printable_context}Too many arguments passed to {node.function_name.value}. Expected {len(expected_arguments)} and receieved {len(passed_arguments)}",
                     )
                 elif len(passed_arguments) < len(expected_arguments):
                     self._add_error(
-                        f"{self._context}Too few arguments passed to {node.function_name.value}. Expected {len(expected_arguments)} and receieved {len(passed_arguments)}",
+                        f"{self._printable_context}Too few arguments passed to {node.function_name.value}. Expected {len(expected_arguments)} and receieved {len(passed_arguments)}",
                     )
                 else:
                     self._add_error(
-                        f"{self._context}Mismatched argument types passed to {node.function_name.value}. Expected {expected_arguments} and received {passed_arguments}",
+                        f"{self._printable_context}Mismatched argument types passed to {node.function_name.value}. Expected {expected_arguments} and received {passed_arguments}",
                     )
                 return
             node.add_annotation(
@@ -300,13 +296,13 @@ class SemanticAnalyzer:
             self._annotate(node.right_side)
             if node.left_side.annotation != IntegerAnnotation():
                 self._add_error(
-                    f"{self._context}Expected left side of {node} to be Integer instead found {node.left_side.annotation}",
+                    f"{self._printable_context}Expected left side of {node} to be Integer instead found {node.left_side.annotation}",
                 )
                 node.add_annotation(ErrorAnnotation())
                 return
             if node.right_side.annotation != IntegerAnnotation():
                 self._add_error(
-                    f"{self._context}Expected right side of {node} to be Integer instead found {node.right_side.annotation}",
+                    f"{self._printable_context}Expected right side of {node} to be Integer instead found {node.right_side.annotation}",
                 )
                 node.add_annotation(ErrorAnnotation())
                 return
@@ -319,13 +315,13 @@ class SemanticAnalyzer:
             self._annotate(node.right_side)
             if node.left_side.annotation != IntegerAnnotation():
                 self._add_error(
-                    f"{self._context}Expected left side of {node} to be Integer instead found {node.left_side.annotation}",
+                    f"{self._printable_context}Expected left side of {node} to be Integer instead found {node.left_side.annotation}",
                 )
                 node.add_annotation(ErrorAnnotation())
                 return
             if node.right_side.annotation != IntegerAnnotation():
                 self._add_error(
-                    f"{self._context}Expected right side of {node} to be Integer instead found {node.right_side.annotation}",
+                    f"{self._printable_context}Expected right side of {node} to be Integer instead found {node.right_side.annotation}",
                 )
                 node.add_annotation(ErrorAnnotation())
                 return
@@ -338,13 +334,13 @@ class SemanticAnalyzer:
             self._annotate(node.right_side)
             if node.left_side.annotation != BooleanAnnotation():
                 self._add_error(
-                    f"{self._context}Expected left side of {node} to be Boolean instead found {node.left_side.annotation}",
+                    f"{self._printable_context}Expected left side of {node} to be Boolean instead found {node.left_side.annotation}",
                 )
                 node.add_annotation(ErrorAnnotation())
                 return
             if node.right_side.annotation != BooleanAnnotation():
                 self._add_error(
-                    f"{self._context}Expected right side of {node} to be Boolean instead found {node.right_side.annotation}",
+                    f"{self._printable_context}Expected right side of {node} to be Boolean instead found {node.right_side.annotation}",
                 )
                 node.add_annotation(ErrorAnnotation())
                 return
@@ -370,7 +366,7 @@ class SemanticAnalyzer:
             self._annotate(node.value)
             if node.value.annotation != IntegerAnnotation():
                 self._add_error(
-                    f"{self._context}Expected value of {node} to be an Integer instead found {node.value.annotation}",
+                    f"{self._printable_context}Expected value of {node} to be Integer instead found {node.value.annotation}",
                 )
                 node.add_annotation(ErrorAnnotation())
                 return
@@ -382,7 +378,7 @@ class SemanticAnalyzer:
             self._annotate(node.value)
             if node.value.annotation != BooleanAnnotation():
                 self._add_error(
-                    f"{self._context}Expected value of {node} to be a Boolean instead found {node.value.annotation}",
+                    f"{self._printable_context}Expected value of {node} to be Boolean instead found {node.value.annotation}",
                 )
                 node.add_annotation(ErrorAnnotation())
                 return
@@ -399,9 +395,10 @@ class SemanticAnalyzer:
             self._annotate(node.alternative)
             if node.condition.annotation != BooleanAnnotation():
                 self._add_error(
-                    f"{self._context}Expected condition of {node} to be a Boolean instead found {node.condition.annotation}",
+                    f"{self._printable_context}Expected condition of {node} to be Boolean instead found {node.condition.annotation}",
                 )
                 node.add_annotation(ErrorAnnotation())
+                return
             if node.consequent.annotation == node.alternative.annotation:
                 node.add_annotation(node.consequent.annotation)
             else:

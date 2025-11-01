@@ -12,12 +12,19 @@ class Kind(Enum):
 
 
 class Symbol:
-    def __init__(self, name: str, kind: Kind, symbol_type: AnnotationType):
+    def __init__(
+        self,
+        name: str,
+        kind: Kind,
+        symbol_type: AnnotationType,
+        parameters: "list[Symbol] | None" = None,
+    ):
         self.name: str = name
         self.kind: Kind = kind
         self.symbol_type: AnnotationType = symbol_type
         self.forward_references: set[str] = set()
         self.backward_references: set[str] = set()
+        self.parameters: list[Symbol] | None = parameters
 
     def add_forward_reference(self, function_name: str):
         self.forward_references.add(function_name)
@@ -31,10 +38,20 @@ class Symbol:
             f"{self.name}",
             f"\tsymbol_type = {self.symbol_type}",
         ]
+        if self.parameters is not None and len(self.parameters) > 0:
+            out.append(
+                "\tparameters = "
+                + ", ".join(
+                    f"{parameter.name}: {parameter.symbol_type}"
+                    for parameter in self.parameters
+                ),
+            )
         if len(self.forward_references) > 0:
-            out.append(f"\tforward_refs = {', '.join(self.forward_references)}")
+            out.append(f"\tfunctions it calls = {', '.join(self.forward_references)}")
         if len(self.backward_references) > 0:
-            out.append(f"\tbackward_refs = {', '.join(self.backward_references)}")
+            out.append(
+                f"\tfunctions that call it = {', '.join(self.backward_references)}"
+            )
         return "\n".join(out)
 
 
@@ -92,8 +109,9 @@ class SymbolTable:
     @override
     def __str__(self) -> str:
         out: list[str] = []
-        for scope in self._scope_stack:
-            out.append("")
+        for idx, scope in enumerate(self._scope_stack):
+            if idx != 0:
+                out.append("")
             for value in scope.values():
                 out.append(str(value))
         return "\n".join(out)

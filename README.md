@@ -12,22 +12,24 @@ Produced by the **Compile Squad**
 #### Primary Source Code
 
 - `src/compiler`: The home for all of the python source code
-- `scanner.py`: Scans through the program and seperates each character of string of characters into tokens
-- `position.py`: Custom position class to track the location in the program
-- `token.py`: Custom token class with a number of TokenTypes
-- `klein_errors.py`: Custom errors classes related to different stages of compiling
-- `__init__.py`: These files are empty, but are required through to let python know that the current folder is a module.
-- `__main__.py`: This file provides some scripts which are accessible to the user after installation
-- `requirements.txt`: a list of all 3d party dependencies which get automatically installed when running make setup
-- `parser.py`: Parses a program via a passed scanner and optionally the file name of the parse table to use
-- `parse_table.py`: Parses a file into a usable parse table
-- `parse-table.csv`: A parse table made by hand in [Google Sheets](https://docs.google.com/spreadsheets/d/1-ugst1Gmi6EBQGiQIIBZfSfw-93SWWUm1b03G6lsCB4/edit?usp=sharing). Each value corresponds to an enum (either TokenType or NonTerminal).
-- `ast.py`: All ast nodes and utilities to display
+  - `scanner.py`: Scans through the program and seperates each character of string of characters into tokens
+  - `position.py`: Custom position class to track the location in the program
+  - `token.py`: Custom token class with a number of TokenTypes
+  - `klein_errors.py`: Custom errors classes related to different stages of compiling
+  - `__init__.py`: These files are empty, but are required through to let python know that the current folder is a module.
+  - `__main__.py`: This file provides some scripts which are accessible to the user after installation
+  - `requirements.txt`: a list of all 3d party dependencies which get automatically installed when running make setup
+  - `parser.py`: Parses a program via a passed scanner and optionally the file name of the parse table to use
+  - `parse_table.py`: Parses a file into a usable parse table
+  - `parse-table.csv`: A parse table made by hand in [Google Sheets](https://docs.google.com/spreadsheets/d/1-ugst1Gmi6EBQGiQIIBZfSfw-93SWWUm1b03G6lsCB4/edit?usp=sharing). Each value corresponds to an enum (either TokenType or NonTerminal).
+  - `ast_nodes.py`: All ast nodes and utilities to display
+  - `symbol_table.py`: The symbol table and associated symbol code
+  - `semantic_analyzer.py`: Takes in a program and generates a symbol table and detects any semantic errors
 - `src/compiler/programs`: The home for all user-facing program source code
-- `token_lister.py`: Takes in a program and prints its token in an easily readable format
-- `validator.py`: Takes in a program and prints whether it is a valid klein program or what issues arose when parsing
-- `ast_lister.py`: Takes in a program and prints its ast as text
-- `ast_lister_dot.py`: Takes in a program and prints its ast as a dot program
+  - `token_lister.py`: Takes in a program and prints its token in an easily readable format
+  - `validator.py`: Takes in a program and prints whether it is a valid klein program or what issues arose when parsing
+  - `ast_lister.py`: Takes in a program and prints its ast as text
+  - `ast_lister_dot.py`: Takes in a program and prints its ast as a dot program
 
 #### Documentation Files
 
@@ -36,6 +38,7 @@ Produced by the **Compile Squad**
 - `doc/refactored-grammer.txt`: The klein grammar with specific refactoring to make generating first/follow sets easier. All changes are described with comments
 - `doc/first-and-follow-sets.md`: A listing of all first and follow sets displayed in seperate markdown tables
 - `doc/ast-nodes.txt`: A listing of all ast nodes created for the klein language
+- `doc/all-semantic-error-log.txt`: The output of running the semantic error checker against the semantic-error.kln program
 
 #### Project Files
 
@@ -46,6 +49,7 @@ Produced by the **Compile Squad**
 - `kleins`: a bash script to allow scanning any klein program
 - `kleinf`: a bash script to allow validating any klein program
 - `kleinp`: a bash script to allow printing the ast of any klein program
+- `kleinv`: a bash script to print the symbol table or any semantic errors
 - `CS4550_Compiler.code-workspace` and `.vscode`: We all use vscode, so these files help our configurations to stay in sync.
 - `.ruff.toml`: configurations for ruff (python linter and formatter) to help standardize code
 
@@ -61,12 +65,15 @@ Produced by the **Compile Squad**
 - `programs/PrintErr2.kln`: Small Error: Print inside of an expression (Module 2)
 - `programs/TypeErr.kln`: Small Error: No type in formal parameter (Module 2)
 - `programs/FractionAdd.kln`: Adds 2 fractions and prints out result (Module 3)
+- `programs/semantic-errors.kln`: A program with every possible semantic error (Module 4)
+- `programs/fixed-semantic-errors.kln`: The above program with all semantic errors fixed (Module 4)
 
 #### Test Files
 
 - `tests/test_scanner.py`: contains a large number of tests to help validate and ensure functionality of the klein scanner
 - `tests/test_position.py`: contains a few tests for the position tracker
 - `tests/test_parser.py`: contains a number of tests for the parser
+- `tests/test_semantic_analyzer.py`: contains a number of tests for the semantic analyzer
 - `tests/programs/`: contains professor provided klein programs (used in testing)
 
 ## Known Bugs
@@ -74,6 +81,10 @@ Produced by the **Compile Squad**
 ### Scanner:
 
 - If you do an identifier or integer over 1000 characters long it will crash (due to recursion depth)
+
+### Parser:
+
+- Under unknown conditions, the carrot can be off by one when printing source code of errors
 
 ## Getting Started
 
@@ -99,9 +110,9 @@ Produced by the **Compile Squad**
     3. Retry `make setup`
 - Thats it! Now your path depends on what you want to do
 
-#### Running kleins/kleinf on a klein source code file
+#### Running kleins/kleinf/kleinv on a klein source code file
 
-- The following instructions are applicable to any of the kleins/kleinf programs. For simplicity, I will refer to that as the `kleins` file for this instruction set which can simply be substitued for your chosen bash file.
+- The following instructions are applicable to any of the kleins/kleinf/kleinv programs. For simplicity, I will refer to that as the `kleins` file for this instruction set which can simply be substitued for your chosen bash file.
 - Ensure that the `kleins` file in the project root is executable
   - If not, running `chmod +x kleins` should make it
 - From the root, you can now run `./kleins path/to/source.kln`
@@ -154,6 +165,16 @@ Produced by the **Compile Squad**
   - 2 As a file:
     - Now you can run the ast printer like `python src/compiler/programs/ast_lister.py $'function hi(): integer 1'` and see the ast in text
     - Now you can run the ast dot printer like `python src/compiler/programs/ast_lister_dot.py $'function hi(): integer 1'` and see the ast as a dot program
+
+#### Running the symbol table printer
+
+- Activate the virtual environment
+  - This can be done by (from the root) running `source ./.venv/bin/activate`
+- Two options:
+  - 1 As a script:
+    - You can now run `klein_display_symbol_table $'function main(): integer 1'` and see the symbol table or any semantic errors
+  - 2 As a file:
+    - Now you can run the program validator against programs like `python src/compiler/programs/display_symbol_table.py $'function main(): integer 1'` and see the symbol table or any semantic errors
 
 #### Running Tests
 

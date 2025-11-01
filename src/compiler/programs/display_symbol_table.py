@@ -13,14 +13,24 @@ def display_symbol_table():
 
     try:
         ast = parser.parse()
-        analyzer = SemanticAnalyzer(ast)
-        analyzer.annotate()
-        print(analyzer.symbol_table)
     except LexicalError as e:
         print(e)
+        return
     except ParseError as e:
         print(e)
+        return
+    except Exception:
+        print("Klein Error: unable to continue processing")
+        return
+
+    analyzer = SemanticAnalyzer(ast)
+    try:
+        analyzer.annotate()
+        print(analyzer.symbol_table)
+        analyzer.display_issues()
     except SemanticError as e:
+        print(analyzer.symbol_table)
+        analyzer.display_issues()
         print(e)
     except Exception:
         print("Klein Error: unable to continue processing")

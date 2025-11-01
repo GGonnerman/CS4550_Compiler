@@ -22,13 +22,20 @@ function print(a: integer): integer
 (* Expression being called with wrong typed children should raise an error *)
 function expression_called_with_wrong_children(): boolean
     print(true + true)
+    print(1 + true)
     print(true - false)
+    print(1 - false)
     print(false * true)
+    print(1 * true)
     print(false / false)
+    print(1 / false)
     print(true < true)
+    print(1 < true)
     print(not 1)
     print(2 and 3)
+    print(true and 3)
     print(4 or 5)
+    print(false or 5)
     true
 
 (* If being called with an integer in place of conditional should raise error *)
@@ -36,8 +43,9 @@ function if_called_with_int_as_conditional(): integer
     if 1 then 2 else 3
 
 (* If having 2 different values inside of print should *not* raise an error *)
-function if_possible_wrong_return_type_print(): integer
+function union_print_type(): integer
     print(if true then 1 else false)
+    print(if true then false else 1)
     1
 
 (* If possibly returning the wrong type should raise error *)
@@ -64,6 +72,10 @@ function calls_nonexistant_fun(): integer
     print(nonexistant_fun())
     1
 
+(* Using param as function should raise error *)
+function calls_param_as_fun(int_param: integer): integer
+    int_param()
+
 (* Using a nonexistant parameter should raise error *)
 function uses_nonexistant_param(): integer
     1 + nonexistant_param
@@ -80,27 +92,25 @@ function error_bubbles_cleanly(): integer
 function Param_call(): integer
     print(int_typing(true))
     print(bool_typing(1))
-    print(wrong_param_count(1,2))
+    print(sequential_typing(1, 2, false))
+    print(too_many_param(1,2))
+    print(too_few_param(1,2))
     1
 function bool_typing(wrong_type: boolean): boolean
-    1
+    wrong_type
 function int_typing(wrong_type:integer): integer
-    1
-function wrong_param_count(param: integer): integer
-    1
-    
-(* Unnecessary function call should have warning *)
-function unneccesarry_function(param: integer): integer
-    int_typing(param)
+    wrong_type
+function sequential_typing(a: integer, b: boolean, c: boolean): integer
+    if b and c then a else 1
+function too_many_param(a: integer): integer
+    a
+function too_few_param(a: integer, b: integer, c: integer): integer
+    a + b + c
 
 (* Recursive function should *not* raise error *)
 function recursive_fun(a: integer): integer
     if a < 1
     then a
     else a + recursive_fun(a - 1)
-
-(* Recursive function that never terminates have warning *)
-function nonterminating_recursive_fun(a: integer): integer
-    nonterminating_recursive_fun(a)
     
 (* Missing a main function should raise an error *)
