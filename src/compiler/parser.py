@@ -1,4 +1,9 @@
-from compiler.ast import ASTNode, SemanticAction, SemanticStack, action_to_astnode
+from compiler.ast_nodes import (
+    Program,
+    SemanticAction,
+    SemanticStack,
+    action_to_astnode,
+)
 from compiler.klein_errors import ParseError
 from compiler.parse_table import NonTerminal, generate_parse_table
 from compiler.scanner import Scanner, tokentype_to_str
@@ -30,7 +35,7 @@ class Parser:
             )
         return expected_message
 
-    def parse(self) -> ASTNode:
+    def parse(self) -> Program:
         stack: list[NonTerminal | TokenType | SemanticAction] = [
             TokenType.END_OF_FILE,
             NonTerminal.PROGRAM,
@@ -97,4 +102,11 @@ class Parser:
                 f"Expected 1 value in semantic stack when done parsing. Instead encountered {len(semantic_stack)} items: {semantic_stack}",
             )
 
-        return semantic_stack.pop()
+        top_of_stack = semantic_stack.pop()
+
+        if not isinstance(top_of_stack, Program):
+            raise ParseError(
+                f"Expected parsing to return a program instead received {top_of_stack.__class__.__name__}",
+            )
+
+        return top_of_stack

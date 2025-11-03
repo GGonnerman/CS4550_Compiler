@@ -27,6 +27,7 @@ class KleinError(Exception):
                 continue
             break
 
+        # TODO: In some cases edge, this is off by one
         display_position += 1  # This account for 0 vs 1 indexing
         return "\n".join(
             [
@@ -77,4 +78,16 @@ class ParseError(KleinError):
             line_information = ""
         return insert_newlines(
             f"Klein Parse Error: {self._position}{line_information}\n{self._message}",
+        )
+
+
+class SemanticError(KleinError):
+    def __init__(self, message: str):
+        super().__init__()
+        self._message: str = message
+
+    @override
+    def __str__(self) -> str:
+        return insert_newlines(
+            f"Klein Semantic Error: {self._message}",
         )

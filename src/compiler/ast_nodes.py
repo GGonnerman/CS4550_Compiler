@@ -1,6 +1,6 @@
 import random
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from enum import StrEnum, auto
 from typing import Self, TypeVar
 
@@ -72,6 +72,97 @@ class SemanticAction(StrEnum):
     MAKE_BOOLEAN_LITERAL = auto()
 
 
+class AnnotationType(ABC):
+    @override
+    def __eq__(self, value: object, /) -> bool:
+        # FIXME: Bug dependent on whether union eq is has override
+        if isinstance(value, UnionAnnotation):
+            return self in value
+        return self.__class__ == value.__class__
+
+
+class EmptyAnnotation(AnnotationType):
+    @override
+    def __str__(self) -> str:
+        return "None"
+
+
+class IntegerAnnotation(AnnotationType):
+    @override
+    def __str__(self) -> str:
+        return "Integer"
+
+
+class BooleanAnnotation(AnnotationType):
+    @override
+    def __str__(self) -> str:
+        return "Boolean"
+
+
+class SequenceAnnotation(AnnotationType):
+    def __init__(self, sequence: Sequence[AnnotationType]):
+        self.value: Sequence[AnnotationType] = sequence
+
+    @override
+    def __str__(self) -> str:
+        return "(" + ", ".join(str(v) for v in self.value) + ")"
+
+    def __len__(self):
+        return len(self.value)
+
+    def __iter__(self):
+        for value in self.value:
+            yield value
+
+    @override
+    def __eq__(self, value: object, /) -> bool:
+        if not isinstance(value, SequenceAnnotation):
+            return False
+        if len(self) != len(value):
+            return False
+        return all(v1 == v2 for v1, v2 in zip(self, value, strict=False))
+
+
+class FunctionAnnotation(AnnotationType):
+    def __init__(self, source: AnnotationType, destination: AnnotationType):
+        self.source: AnnotationType = source
+        self.destination: AnnotationType = destination
+
+    @override
+    def __eq__(self, value: object, /) -> bool:
+        if not isinstance(value, FunctionAnnotation):
+            return False
+        return self.source == value.source and self.destination == value.destination
+
+    @override
+    def __str__(self) -> str:
+        return f"{self.source} -> {self.destination}"
+
+
+class UnionAnnotation(AnnotationType):
+    def __init__(self, options: Iterable[AnnotationType]):
+        self.options: Iterable[AnnotationType] = options
+
+    def __contains__(self, value: AnnotationType):
+        return value in self.options
+
+    @override
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, UnionAnnotation):
+            return all(option in other for option in self.options)
+        return False
+
+    @override
+    def __str__(self) -> str:
+        return "{" + " OR ".join([str(option) for option in self.options]) + "}"
+
+
+class ErrorAnnotation(AnnotationType):
+    @override
+    def __str__(self) -> str:
+        return "Error"
+
+
 class ASTNode(ABC):
     @override
     def __str__(self) -> str:
@@ -89,6 +180,16 @@ class ASTNode(ABC):
 
     def __init__(self):
         self._hash: int = random.getrandbits(128)
+        self._annotation: AnnotationType | None = None
+
+    def add_annotation(self, annotation: AnnotationType):
+        self._annotation = annotation
+
+    @property
+    def annotation(self) -> AnnotationType:
+        if self._annotation is None:
+            raise ValueError(f"Cannot get unset type annotation for node {self}")
+        return self._annotation
 
     @override
     def __hash__(self):
@@ -148,6 +249,9 @@ class DefinitionList(ASTNode):
         super().__init__()
         self.definitions: tuple[Definition, ...] = tuple(definitions)
 
+    def __iter__(self):
+        return iter(self.definitions)
+
     @override
     @classmethod
     def build(
@@ -200,6 +304,9 @@ class ParameterList(ASTNode):
     def __init__(self, parameters: Iterable["IdWithType"]):
         super().__init__()
         self.parameters: tuple[IdWithType, ...] = tuple(parameters)
+
+    def __iter__(self):
+        return iter(self.parameters)
 
     @override
     @classmethod
@@ -563,6 +670,85 @@ action_to_astnode: dict[
     SemanticAction.MAKE_INTEGER_LITERAL: IntegerLiteral.build,
     SemanticAction.MAKE_BOOLEAN_LITERAL: BooleanLiteral.build,
 }
+
+
+def convert_astnode_to_text(
+    node: ASTNode,
+    indent: int = 0,
+    spacer: str = "  ",
+    out: list[str] | None = None,
+):
+    if out is None:
+        out = []
+    main_indent: str = indent * spacer
+    sub_indent: str = (indent + 1) * spacer
+    if isinstance(node, Program):
+        out.append(f"{main_indent}{node}")
+        convert_astnode_to_text(node.definition_list, indent + 1, spacer, out)
+    elif isinstance(node, DefinitionList):
+        for definition in node.definitions:
+            convert_astnode_to_text(definition, indent, spacer, out)
+    elif isinstance(node, Definition):
+        out.append(f"{main_indent}{node}")
+        out.append(f"{sub_indent}name {node.name.value}")
+        out.append(f"{sub_indent}parameters")
+        convert_astnode_to_text(node.parameters, indent + 2, spacer, out)
+        out.append(f"{sub_indent}returns {node.return_type}")
+        out.append(f"{sub_indent}body")
+        convert_astnode_to_text(node.body, indent + 2, spacer, out)
+    elif isinstance(node, ParameterList):
+        for parameter in node.parameters:
+            convert_astnode_to_text(parameter, indent, spacer, out)
+    elif isinstance(node, IdWithType):
+        out.append(f"{main_indent}{node.type} {node.name.value}")
+    elif isinstance(node, Body):
+        for print_stm in node.print_expressions:
+            convert_astnode_to_text(print_stm, indent, spacer, out)
+        convert_astnode_to_text(node.body, indent, spacer, out)
+    elif isinstance(node, FunctionCallExpression):
+        out.append(f"{main_indent}function call")
+        out.append(f"{sub_indent}name {node.function_name.value}")
+        convert_astnode_to_text(node.argument_list, indent + 1, spacer, out)
+    elif isinstance(node, ArgumentList):
+        if len(node.arguments) == 0:
+            return None
+        out.append(f"{main_indent}arguments")
+        for argument in node.arguments:
+            convert_astnode_to_text(argument, indent + 1, spacer, out)
+    elif isinstance(node, Argument):
+        convert_astnode_to_text(node.value, indent, spacer, out)
+    elif isinstance(node, BinaryExpression):
+        out.append(f"{main_indent}{node}")
+        if isinstance(node.left_side, (Identifier, Literal)):
+            out.append(f"{sub_indent}left_side {node.left_side}")
+        else:
+            out.append(f"{sub_indent}left_side")
+            convert_astnode_to_text(node.left_side, indent + 2, spacer, out)
+        if isinstance(node.right_side, (Identifier, Literal)):
+            out.append(f"{sub_indent}right_side {node.right_side}")
+        else:
+            out.append(f"{sub_indent}right_side")
+            convert_astnode_to_text(node.right_side, indent + 2, spacer, out)
+    elif isinstance(node, UnaryExpression):
+        out.append(f"{main_indent}{node}")
+        if isinstance(node.value, (Identifier, Literal)):
+            out.append(f"{sub_indent}value {node.value}")
+        else:
+            out.append(f"{sub_indent}value")
+            convert_astnode_to_text(node.value, indent + 2, spacer, out)
+    elif isinstance(node, (Identifier, Literal)):
+        out.append(f"{main_indent}{node}")
+    elif isinstance(node, IfExpression):
+        out.append(f"{main_indent}{node}")
+        out.append(f"{sub_indent}condition")
+        convert_astnode_to_text(node.condition, indent + 2, spacer, out)
+        out.append(f"{sub_indent}consequent")
+        convert_astnode_to_text(node.consequent, indent + 2, spacer, out)
+        out.append(f"{sub_indent}alternative")
+        convert_astnode_to_text(node.alternative, indent + 2, spacer, out)
+    else:
+        raise NotImplementedError(f"Node of type {node} has not yet been implemented")
+    return "\n".join(out)
 
 
 def display_astnode(node: ASTNode, indent: int = 0, spacer: str = "  "):
