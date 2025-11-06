@@ -1,0 +1,42 @@
+#!/bin/bash
+
+while test $# != 0
+do
+    case "$1" in
+    -o|--output) DESTINATION_FILE_NAME=$2 ; shift ;;
+    *)  break ;;
+    esac
+    shift
+done
+
+
+SOURCE_FILE_NAME="$1"
+if [[ ! -n "$DESTINATION_FILE_NAME" ]]; then
+    BASE_FILE_NAME="${SOURCE_FILE_NAME%.*}"
+    DESTINATION_FILE_NAME="$BASE_FILE_NAME.tm"
+fi
+
+if [[ ! -f $SOURCE_FILE_NAME ]]; then 
+    if [[ $SOURCE_FILE_NAME == *.kln ]]; then
+        echo "Unable to find file $SOURCE_FILE_NAME. Please ensure source file exists"
+        exit
+    fi
+    MODIFIED_SOURCE_FILE_NAME="$SOURCE_FILE_NAME.kln"
+    if [[ ! -f "$MODIFIED_SOURCE_FILE_NAME" ]]; then 
+        echo "Unable to find file $SOURCE_FILE_NAME or $MODIFIED_SOURCE_FILE_NAME. Please ensure source file exists"
+        exit
+    fi
+    SOURCE_FILE_NAME="$MODIFIED_SOURCE_FILE_NAME"
+fi
+
+PROGRAM_CONTENT=$(cat "$SOURCE_FILE_NAME")
+COMPILED_CODE=$(./.venv/bin/klein_compile "$PROGRAM_CONTENT")
+
+# Print the error if there is one, otherwise redirect the output to the
+# destination file.
+retVal=$?
+if [ $retVal -ne 0 ]; then
+    echo "$COMPILED_CODE"
+else
+    echo "$COMPILED_CODE" > "$DESTINATION_FILE_NAME"
+fi
