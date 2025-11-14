@@ -124,8 +124,8 @@ class SequenceAnnotation(AnnotationType):
 
 
 class FunctionAnnotation(AnnotationType):
-    def __init__(self, source: AnnotationType, destination: AnnotationType):
-        self.source: AnnotationType = source
+    def __init__(self, source: SequenceAnnotation, destination: AnnotationType):
+        self.source: SequenceAnnotation = source
         self.destination: AnnotationType = destination
 
     @override
