@@ -13,7 +13,10 @@ class Comment(TMLine):
         self._comment: str = comment
 
     def print(self):
-        print(f"* {self._comment}")
+        if len(self._comment) == 0:
+            print("*")
+        else:
+            print(f"* {self._comment}")
 
 
 class TMCommand(TMLine):
@@ -50,13 +53,17 @@ class TMCommand(TMLine):
     ):
         line_num_formatted = str(self.line_num).rjust(TMCommand.max_line_size)
         command_formatted = str(self.command).ljust(TMCommand.max_command_size)
-        register_section_formatted = str(self.register_section).ljust(
-            TMCommand.max_register_section,
-        )
-        comment_formatted = f" ; {self.comment}" if self.comment else ""
-        print(
-            f"{line_num_formatted}: {command_formatted} {register_section_formatted}{comment_formatted}",
-        )
+        if self.comment:
+            register_section_formatted = str(self.register_section).ljust(
+                TMCommand.max_register_section,
+            )
+            print(
+                f"{line_num_formatted}: {command_formatted} {register_section_formatted} ; {self.comment}",
+            )
+        else:
+            print(
+                f"{line_num_formatted}: {command_formatted} {self.register_section}",
+            )
 
 
 class ROCommand(TMCommand):
