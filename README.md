@@ -137,6 +137,10 @@ Produced by the **Compile Squad**
 - `tests/test_semantic_analyzer.py`: contains a number of tests for the semantic analyzer
 - `tests/programs/`: contains professor provided klein programs (used in testing)
 
+## Interested in Code Generation, TM, and Memory Management?
+
+- Documentation for these topics can be found [here](./doc/code-generator-memory-explained.md)!
+
 ## Known Bugs
 
 ### Scanner:
