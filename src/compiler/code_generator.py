@@ -9,6 +9,7 @@ from compiler.ast_nodes import (
     IntegerLiteral,
     Program,
 )
+from compiler.klein_errors import CodeGenerationError
 from compiler.symbol_table import SymbolTable
 from compiler.tm import (
     AddCommand,
@@ -44,14 +45,16 @@ class CodeGenerator:
     def _get_parameter_count(self, name: str) -> int:
         fn = self._symbol_table.scope_lookup(name)
         if fn is None:
-            raise ValueError(f"Missing {name} function")
+            raise CodeGenerationError(f"Missing {name} function in symbol table")
         fn_type = fn.symbol_type
         if not isinstance(fn_type, FunctionAnnotation):
-            raise TypeError(f"{name} function symbol type is not a function")
+            raise CodeGenerationError(
+                f"{name} symbol type was expected to be function. Instead found {fn_type.__class__.__name__}"
+            )
         return len(fn_type.source)
 
     def _select_tmp_register(self) -> int:
-        return 2
+        return 2  # Currently constant, but later can be more complicated logic
 
     # NOTE: Technically, this code is very similar to the "_generate_function_call"
     # method, with the main difference being the loading of arguments. However,
@@ -94,12 +97,14 @@ class CodeGenerator:
 
     def _calling_sequence_calling_fn(
         self,
+        function_name: str,
         destination_addr: int,
         params: list[MemoryLocation],
     ) -> list[TMLine]:
-        status_offset_from_top = len(params) + 5
+        param_count = self._get_parameter_count(function_name)
+        status_offset_from_top = param_count + 5
         top_offset_from_top = status_offset_from_top + 1
-        return_addr_offset_from_top = 1 + len(params)
+        return_addr_offset_from_top = 1 + param_count
         code: list[TMLine] = []
 
         code.extend(
@@ -224,6 +229,7 @@ class CodeGenerator:
         return [
             Comment(f"Calling {function_name}"),
             *self._calling_sequence_calling_fn(
+                function_name,
                 destination_addr,
                 params,
             ),
@@ -278,7 +284,7 @@ class CodeGenerator:
     ) -> list[TMLine]:
         if isinstance(expression, IntegerLiteral):
             return [LdcCommand(into_reg, int(expression.value))]
-        raise NotImplementedError(
+        raise CodeGenerationError(
             f"Generating code for expression of type {expression.__class__.__name__} is not yet implemented",
         )
 

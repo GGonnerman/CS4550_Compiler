@@ -29,7 +29,6 @@ def display_symbol_table():
         print(analyzer.symbol_table)
         analyzer.display_issues()
     except SemanticError as e:
-        print(analyzer.symbol_table)
         analyzer.display_issues()
         print(e)
     except Exception:

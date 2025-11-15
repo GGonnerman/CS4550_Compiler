@@ -91,3 +91,15 @@ class SemanticError(KleinError):
         return insert_newlines(
             f"Klein Semantic Error: {self._message}",
         )
+
+
+class CodeGenerationError(KleinError):
+    def __init__(self, message: str):
+        super().__init__()
+        self._message: str = message
+
+    @override
+    def __str__(self) -> str:
+        return insert_newlines(
+            f"Klein Code Generation Error: {self._message}",
+        )

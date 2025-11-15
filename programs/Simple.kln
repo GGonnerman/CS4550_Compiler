@@ -1,4 +1,0 @@
-function main() : integer
-    print(139)
-    print(19801)
-    1024
