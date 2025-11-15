@@ -49,6 +49,12 @@
 
 ![DMEM Diagram](./memory-diagrams/dmem.png)
 
+### Real Example
+
+- The following is a the DMEM after running an example print-one program in klein with highlighting for each sections of the stack frames within DMEM
+
+![Real DMEM and Stack Frame Example](./memory-diagrams/dmem-stack-frame-example.png)
+
 ## Calculating Offsets
 
 ### Calculating Offsets within a Stack Frame

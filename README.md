@@ -153,7 +153,7 @@ Produced by the **Compile Squad**
 
 ### Code Generator:
 
-- Passing many arguments to the tm cli program could cause incorrect internal state when returning from main function. However, this is not known to have any effects on functionality.
+- Passing many arguments to the tm cli program could cause incorrect internal state when returning to the main function.
 - Currently only works for limited printing integer literals and returning a value from main
 
 ## More Running Instructions

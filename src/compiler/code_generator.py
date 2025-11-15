@@ -49,7 +49,7 @@ class CodeGenerator:
         fn_type = fn.symbol_type
         if not isinstance(fn_type, FunctionAnnotation):
             raise CodeGenerationError(
-                f"{name} symbol type was expected to be function. Instead found {fn_type.__class__.__name__}"
+                f"{name} symbol type was expected to be function. Instead found {fn_type.__class__.__name__}",
             )
         return len(fn_type.source)
 
@@ -70,30 +70,53 @@ class CodeGenerator:
 
         top_offset_from_top: int = param_count + REG_TOP
         return_addr_offset_from_top: int = 1 + param_count
-        return [
+        code: list[TMLine] = [
             LdcCommand(REG_TOP, 1),
             StCommand(REG_TOP, top_offset_from_top, REG_TOP, "Store current top"),
-            # TODO: Code here to move the arguments down 1 spot in dmem, skipped for
-            # testing purposes.
-            LdaCommand(
-                REG_STATUS,
-                return_addr_offset_from_top,
-                REG_TOP,
-                "Update status",
-            ),
-            Comment(
-                "Do some math to get correct return addr (uses top reg but restores it)",
-            ),
-            LdcCommand(REG_TOP, 3),
-            AddCommand(REG_TOP, REG_TOP, REG_PC),
-            StCommand(REG_TOP, 0, REG_STATUS, "Store the return address"),
-            LdaCommand(REG_TOP, 6, REG_STATUS, "Set the new top pointer"),
-            LdcCommand(7, main_location_imem, "Jump to main"),
-            # grab return value
-            OutCommand(REG_RETURN_VALUE, "Printing main return value"),
-            # halt
-            HaltCommand(),
         ]
+        # Move all arguments down 1 slot in DMEM
+        for i in range(1, param_count + 1):
+            selected_reg = self._select_tmp_register()
+            code.extend(
+                [
+                    LdCommand(
+                        selected_reg,
+                        param_count - i,
+                        REG_TOP,
+                        f"Copy arg #{param_count - i}",
+                    ),
+                    StCommand(
+                        selected_reg,
+                        param_count - i + 1,
+                        REG_TOP,
+                        "Move to next position",
+                    ),
+                ],
+            )
+        # testing purposes.
+        code.extend(
+            [
+                LdaCommand(
+                    REG_STATUS,
+                    return_addr_offset_from_top,
+                    REG_TOP,
+                    "Update status",
+                ),
+                Comment(
+                    "Do some math to get correct return addr (uses top reg but restores it)",
+                ),
+                LdcCommand(REG_TOP, 3),
+                AddCommand(REG_TOP, REG_TOP, REG_PC),
+                StCommand(REG_TOP, 0, REG_STATUS, "Store the return address"),
+                LdaCommand(REG_TOP, 6, REG_STATUS, "Set the new top pointer"),
+                LdcCommand(7, main_location_imem, "Jump to main"),
+                # grab return value
+                OutCommand(REG_RETURN_VALUE, "Printing main return value"),
+                # halt
+                HaltCommand(),
+            ],
+        )
+        return code
 
     def _calling_sequence_calling_fn(
         self,
