@@ -59,7 +59,7 @@ Produced by the **Compile Squad**
 
 #### Need more?
 
-- More details about running the code as well as tests can be found in the [more running instruction](#more-running-instruction) section!
+- More details about running the code as well as tests can be found in the [more running instructions](#more-running-instruction) section!
 
 ## Explanation of Files
 
@@ -152,7 +152,7 @@ Produced by the **Compile Squad**
 - Passing many arguments to the tm cli program could cause incorrect internal state when returning from main function. However, this is not known to have any effects on functionality.
 - Currently only works for limited printing integer literals and returning a value from main
 
-## More Running Instruction
+## More Running Instructions
 
 - Make sure that you have checked out the [quickstart guide](#quickstart-guide) first, and come here for more detailed instructions
 
