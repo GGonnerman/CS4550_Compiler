@@ -1,0 +1,4 @@
+function main() : boolean
+  print(true)
+  print(false)
+  true

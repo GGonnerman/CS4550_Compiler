@@ -1,3 +1,9 @@
+# Ignore tm files generated from programs
+programs/*.tm
+
+# Ignore the tm compiler
+out-cli
+
 # Ignore .bak files
 .bak.*
 

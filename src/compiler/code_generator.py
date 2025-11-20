@@ -3,6 +3,7 @@ from typing import Literal
 
 from compiler.ast_nodes import (
     Body,
+    BooleanLiteral,
     Definition,
     Expression,
     FunctionAnnotation,
@@ -307,6 +308,11 @@ class CodeGenerator:
     ) -> list[TMLine]:
         if isinstance(expression, IntegerLiteral):
             return [LdcCommand(into_reg, int(expression.value))]
+        if isinstance(expression, BooleanLiteral):
+            # 1 represents true for a boolean; 0 represents false
+            if expression.value == "true":
+                return [LdcCommand(into_reg, 1)]
+            return [LdcCommand(into_reg, 0)]
         raise CodeGenerationError(
             f"Generating code for expression of type {expression.__class__.__name__} is not yet implemented",
         )
