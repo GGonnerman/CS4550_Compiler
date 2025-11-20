@@ -184,9 +184,14 @@ class SemanticAnalyzer:
                 )
             self.symbol_table.scope_exit()  # Exit body and parameter scope
             self.symbol_table.scope_exit()
+            parameter_annotation = node.parameters.annotation
+            if not isinstance(parameter_annotation, SequenceAnnotation):
+                raise TypeError(
+                    f"Expected parameter annotation to be a sequence. Instead found {parameter_annotation.__class__.__name__}",
+                )
             node.add_annotation(
                 FunctionAnnotation(
-                    node.parameters.annotation,
+                    parameter_annotation,
                     node.return_type.annotation,
                 ),
             )
