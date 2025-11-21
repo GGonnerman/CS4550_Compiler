@@ -6,6 +6,7 @@ from typing import Self, TypeVar
 
 from typing_extensions import override
 
+from compiler.ir import IR
 from compiler.tokens import Token, TokenType
 
 T = TypeVar("T")
@@ -181,6 +182,23 @@ class ASTNode(ABC):
     def __init__(self):
         self._hash: int = random.getrandbits(128)
         self._annotation: AnnotationType | None = None
+        # TODO: place and code should be moved down to only be a part of expression nodes
+        self._place: int | None = None
+        self._code: list[IR] | None = None
+
+    def set_place(self, place: int):
+        self._place = place
+
+    @property
+    def place(self) -> int | None:
+        return self._place
+
+    def set_code(self, code: list[IR]):
+        self._code = code
+
+    @property
+    def code(self) -> list[IR] | None:
+        return self._code
 
     def add_annotation(self, annotation: AnnotationType):
         self._annotation = annotation

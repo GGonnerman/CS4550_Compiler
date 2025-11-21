@@ -5,22 +5,30 @@ from compiler.ast_nodes import (
     Body,
     BooleanLiteral,
     Definition,
+    DivideExpression,
     Expression,
     FunctionAnnotation,
     IntegerLiteral,
+    MinusExpression,
+    PlusExpression,
     Program,
+    TimesExpression,
 )
+from compiler.ir import IR, IROperation
 from compiler.klein_errors import CodeGenerationError
 from compiler.symbol_table import SymbolTable
 from compiler.tm import (
     AddCommand,
     Comment,
+    DivCommand,
     HaltCommand,
     LdaCommand,
     LdcCommand,
     LdCommand,
+    MulCommand,
     OutCommand,
     StCommand,
+    SubCommand,
     TMLine,
 )
 
@@ -42,6 +50,14 @@ class CodeGenerator:
         self._ast: Program = ast
         self._symbol_table: SymbolTable = symbol_table
         self._code: list[TMLine] = []
+        self._position: int = 0
+        self._register: int = 0
+        self._register_map: dict[int, list[int | str]] = {}
+
+    # Alternating returning reg 1-2 will work good enough for now
+    def _get_register(self):
+        self._register += 1
+        return (self._register % 2) + 1
 
     def _get_parameter_count(self, name: str) -> int:
         fn = self._symbol_table.scope_lookup(name)
@@ -289,7 +305,10 @@ class CodeGenerator:
                     [MemoryLocation("register", selected_reg)],
                 ),
             )
-        code.extend(self._generate_expression(body.body, REG_RETURN_VALUE))
+        ir: list[IR] = []
+        self._generate_3ac(body.body, ir)
+        code.extend(self._parse_3ac(ir))
+        # code.extend(self._generate_expression(body.body, REG_RETURN_VALUE))
         code.append(
             StCommand(
                 REG_RETURN_VALUE,
@@ -300,6 +319,115 @@ class CodeGenerator:
         code.extend(self._return_sequence_called_fn(param_count))
 
         return code
+
+    def _make_new_temp(self):
+        self._position += 1
+        return self._position - 1
+
+    # Instead of generating expressions directly as code, we will generate 3AC (3 address code)
+    # NOTE: This function *modified* the argument ir's original list!
+    def _generate_3ac(
+        self,
+        expression: Expression,
+        ir: list[IR],
+    ) -> None:
+        if isinstance(expression, IntegerLiteral):
+            place = self._make_new_temp()
+            expression.set_place(place)
+            ir.append(IR(place, int(expression.value), IROperation.SET_LITERAL, None))
+        elif isinstance(expression, BooleanLiteral):
+            place: int = self._make_new_temp()
+            # 1 represents true for a boolean; 0 represents false
+            value = 1 if expression.value == "true" else 0
+            expression.set_place(place)
+            ir.append(IR(place, value, IROperation.SET_LITERAL, None))
+        elif isinstance(
+            expression,
+            (PlusExpression, MinusExpression, TimesExpression, DivideExpression),
+        ):
+            place: int = self._make_new_temp()
+            self._generate_3ac(expression.left_side, ir)
+            self._generate_3ac(expression.right_side, ir)
+            operation: IROperation = {
+                PlusExpression: IROperation.PLUS,
+                MinusExpression: IROperation.MINUS,
+                TimesExpression: IROperation.TIMES,
+                DivideExpression: IROperation.DIVIDE,
+            }[expression.__class__]
+
+            ir.append(
+                IR(
+                    place,
+                    expression.left_side.place,
+                    operation,
+                    expression.right_side.place,
+                ),
+            )
+        else:
+            raise CodeGenerationError(
+                f"Generating code for expression of type {expression.__class__.__name__} is not yet implemented",
+            )
+
+    def _parse_3ac(self, ir: list[IR]) -> list[TMLine]:
+        out: list[TMLine] = []
+        for line in ir:
+            if line.op == IROperation.SET_LITERAL:
+                if not isinstance(line.arg1, int):
+                    raise CodeGenerationError("Arg1 was None")
+                if not isinstance(line.result, int):
+                    raise CodeGenerationError("Result was not an integer")
+                out.append(
+                    LdcCommand(REG_RETURN_VALUE, line.arg1, "Loading literal"),
+                )
+                out.append(
+                    StCommand(REG_RETURN_VALUE, line.result + 7, REG_STATUS),
+                )
+            elif line.op in [
+                IROperation.PLUS,
+                IROperation.MINUS,
+                IROperation.TIMES,
+                IROperation.DIVIDE,
+            ]:
+                if not isinstance(line.arg1, int) or not isinstance(line.arg2, int):
+                    raise CodeGenerationError("Arg1 or 2 was not an int")
+                if not isinstance(line.result, int):
+                    raise CodeGenerationError("Result was not an integer")
+                reg_1 = self._get_register()
+                out.append(
+                    LdCommand(
+                        reg_1,
+                        line.arg1 + 7,
+                        REG_STATUS,
+                        "Loading first temp value",
+                    ),
+                )
+                reg_2 = self._get_register()
+                out.append(
+                    LdCommand(
+                        reg_2,
+                        line.arg2 + 7,
+                        REG_STATUS,
+                        "Loading second temp value",
+                    ),
+                )
+                commandBuilder = {
+                    IROperation.PLUS: AddCommand,
+                    IROperation.MINUS: SubCommand,
+                    IROperation.TIMES: MulCommand,
+                    IROperation.DIVIDE: DivCommand,
+                }[line.op]
+
+                out.append(
+                    commandBuilder(
+                        REG_RETURN_VALUE,
+                        reg_1,
+                        reg_2,
+                        "Adding the two vaules and put into return",
+                    ),
+                )
+            else:
+                raise CodeGenerationError("This operation has not been implemented yet")
+        return out
 
     def _generate_expression(
         self,
