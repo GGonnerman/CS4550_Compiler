@@ -3,12 +3,18 @@ from enum import Enum, auto
 
 
 class IROperation(Enum):
-    NEGATE = auto()
     TIMES = auto()
     DIVIDE = auto()
     PLUS = auto()
     MINUS = auto()
+    EQUALS = auto()
+    LESS_THAN = auto()
+    NOT = auto()
+    UNARY_MINUS = auto()
     SET_LITERAL = auto()
+
+    LABEL = auto()
+    GOTO = auto()
 
 
 @dataclass
@@ -17,3 +23,6 @@ class IR:
     arg1: int | str | None
     op: IROperation | None
     arg2: int | str | None
+
+    def __str__(self) -> str:
+        return f"IR(result={self.result}, arg1={self.arg1}, op={self.op.name if self.op else 'None'}, arg2={self.arg2})"

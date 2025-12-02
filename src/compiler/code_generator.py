@@ -6,22 +6,30 @@ from compiler.ast_nodes import (
     BooleanLiteral,
     Definition,
     DivideExpression,
+    EqualsExpression,
     Expression,
     FunctionAnnotation,
+    IfExpression,
     IntegerLiteral,
+    LessThanExpression,
     MinusExpression,
+    NotExpression,
     PlusExpression,
     Program,
     TimesExpression,
+    UnaryMinusExpression,
 )
 from compiler.ir import IR, IROperation
 from compiler.klein_errors import CodeGenerationError
+from compiler.label import Label
 from compiler.symbol_table import SymbolTable
 from compiler.tm import (
     AddCommand,
     Comment,
     DivCommand,
     HaltCommand,
+    JeqCommand,
+    JltCommand,
     LdaCommand,
     LdcCommand,
     LdCommand,
@@ -38,6 +46,8 @@ REG_STATUS = 5
 REG_TOP = 6
 REG_PC = 7
 
+OFFSET_TO_TEMP = 7
+
 
 @dataclass
 class MemoryLocation:
@@ -50,9 +60,10 @@ class CodeGenerator:
         self._ast: Program = ast
         self._symbol_table: SymbolTable = symbol_table
         self._code: list[TMLine] = []
-        self._position: int = 0
+        self._tmp_count: int = 0
         self._register: int = 0
         self._register_map: dict[int, list[int | str]] = {}
+        self._label_maker: Label = Label()
 
     # Alternating returning reg 1-2 will work good enough for now
     def _get_register(self):
@@ -70,8 +81,11 @@ class CodeGenerator:
             )
         return len(fn_type.source)
 
-    def _select_tmp_register(self) -> int:
+    def _select_tmp(self) -> int:
         return 2  # Currently constant, but later can be more complicated logic
+
+    def _get_label(self) -> str:
+        return self._label_maker.get_label()
 
     # NOTE: Technically, this code is very similar to the "_generate_function_call"
     # method, with the main difference being the loading of arguments. However,
@@ -93,7 +107,7 @@ class CodeGenerator:
         ]
         # Move all arguments down 1 slot in DMEM
         for i in range(1, param_count + 1):
-            selected_reg = self._select_tmp_register()
+            selected_reg = self._select_tmp()
             code.extend(
                 [
                     LdCommand(
@@ -247,7 +261,7 @@ class CodeGenerator:
 
     def _generate_print_fn(self) -> list[TMLine]:
         param_count = self._get_parameter_count("print")
-        selected_reg = self._select_tmp_register()
+        selected_reg = self._select_tmp()
         commands: list[TMLine] = [
             Comment(""),
             Comment("Function: print"),
@@ -290,25 +304,42 @@ class CodeGenerator:
         # module. This only works in limited use case of any number of print calls
         # with integer literal arguments and a return value
         body: Body = definition.body
+        ir: list[IR]
         for print_expr in body.print_expressions:
-            selected_reg = self._select_tmp_register()
-            argument_code: list[TMLine] = self._generate_expression(
-                print_expr.argument_list.arguments[0].value,
-                selected_reg,
-            )
+            ir = []
+            self._generate_ir(print_expr.argument_list.arguments[0].value, ir)
+            argument_code: list[TMLine] = self._parse_ir(ir)
+
             code.extend(argument_code)
+
+            code.append(
+                LdCommand(
+                    REG_RETURN_VALUE,
+                    print_expr.argument_list.arguments[0].value.place + OFFSET_TO_TEMP,
+                    REG_STATUS,
+                    "Loading result of body into return addr",
+                ),
+            )
 
             code.extend(
                 self._generate_function_call(
                     "print",
                     print_location_imem,
-                    [MemoryLocation("register", selected_reg)],
+                    [MemoryLocation("register", REG_RETURN_VALUE)],
                 ),
             )
-        ir: list[IR] = []
-        self._generate_3ac(body.body, ir)
-        code.extend(self._parse_3ac(ir))
-        # code.extend(self._generate_expression(body.body, REG_RETURN_VALUE))
+        ir = []
+        self._reset_temps()
+        self._generate_ir(body.body, ir)
+        code.extend(self._parse_ir(ir))
+        code.append(
+            LdCommand(
+                REG_RETURN_VALUE,
+                body.body.place + OFFSET_TO_TEMP,
+                REG_STATUS,
+                "Loading result of body into return addr",
+            ),
+        )
         code.append(
             StCommand(
                 REG_RETURN_VALUE,
@@ -320,39 +351,50 @@ class CodeGenerator:
 
         return code
 
+    def _reset_temps(self):
+        self._tmp_count = 0
+
     def _make_new_temp(self):
-        self._position += 1
-        return self._position - 1
+        self._tmp_count += 1
+        return self._tmp_count
 
     # Instead of generating expressions directly as code, we will generate 3AC (3 address code)
     # NOTE: This function *modified* the argument ir's original list!
-    def _generate_3ac(
+    def _generate_ir(
         self,
         expression: Expression,
         ir: list[IR],
     ) -> None:
+        place = self._make_new_temp()
         if isinstance(expression, IntegerLiteral):
-            place = self._make_new_temp()
             expression.set_place(place)
             ir.append(IR(place, int(expression.value), IROperation.SET_LITERAL, None))
         elif isinstance(expression, BooleanLiteral):
-            place: int = self._make_new_temp()
             # 1 represents true for a boolean; 0 represents false
             value = 1 if expression.value == "true" else 0
             expression.set_place(place)
             ir.append(IR(place, value, IROperation.SET_LITERAL, None))
         elif isinstance(
             expression,
-            (PlusExpression, MinusExpression, TimesExpression, DivideExpression),
+            (
+                PlusExpression,
+                MinusExpression,
+                TimesExpression,
+                DivideExpression,
+                EqualsExpression,
+                LessThanExpression,
+            ),
         ):
-            place: int = self._make_new_temp()
-            self._generate_3ac(expression.left_side, ir)
-            self._generate_3ac(expression.right_side, ir)
-            operation: IROperation = {
+            expression.set_place(place)
+            self._generate_ir(expression.left_side, ir)
+            self._generate_ir(expression.right_side, ir)
+            operation = {
                 PlusExpression: IROperation.PLUS,
                 MinusExpression: IROperation.MINUS,
                 TimesExpression: IROperation.TIMES,
                 DivideExpression: IROperation.DIVIDE,
+                EqualsExpression: IROperation.EQUALS,
+                LessThanExpression: IROperation.LESS_THAN,
             }[expression.__class__]
 
             ir.append(
@@ -363,24 +405,79 @@ class CodeGenerator:
                     expression.right_side.place,
                 ),
             )
+        elif isinstance(
+            expression,
+            (
+                NotExpression,
+                UnaryMinusExpression,
+            ),
+        ):
+            expression.set_place(place)
+            self._generate_ir(expression.value, ir)
+            operation = {
+                NotExpression: IROperation.NOT,
+                UnaryMinusExpression: IROperation.UNARY_MINUS,
+            }[expression.__class__]
+
+            ir.append(
+                IR(
+                    place,
+                    expression.value.place,
+                    operation,
+                    None,
+                ),
+            )
+        elif isinstance(
+            expression,
+            IfExpression,
+        ):
+            expression.set_place(place)
+            self._generate_ir(expression.condition, ir)
+            self._generate_ir(expression.consequent, ir)
+            self._generate_ir(expression.alternative, ir)
+
+            label1 = self._get_label()
+
+            ir.extend(
+                [
+                    IR(
+                        label1,
+                        None,
+                        IROperation.LABEL,
+                        None,
+                    ),
+                ],
+            )
         else:
+            # We'll get the current expressions working, then add
+            # Labels/goto
+            # Missing types:
+            #     function call
+            #     if expression
+            #     and/or expressions (with short circuiting)
+            #     variable/using a parameter?
             raise CodeGenerationError(
                 f"Generating code for expression of type {expression.__class__.__name__} is not yet implemented",
             )
 
-    def _parse_3ac(self, ir: list[IR]) -> list[TMLine]:
+    def _parse_ir(self, ir: list[IR]) -> list[TMLine]:
         out: list[TMLine] = []
         for line in ir:
             if line.op == IROperation.SET_LITERAL:
                 if not isinstance(line.arg1, int):
                     raise CodeGenerationError("Arg1 was None")
                 if not isinstance(line.result, int):
-                    raise CodeGenerationError("Result was not an integer")
+                    raise CodeGenerationError("Result was not an int")
                 out.append(
                     LdcCommand(REG_RETURN_VALUE, line.arg1, "Loading literal"),
                 )
+                # FIXME: Technically, here we veer into the next stack-frame because we never modify our top (or set it to account for this size...)
                 out.append(
-                    StCommand(REG_RETURN_VALUE, line.result + 7, REG_STATUS),
+                    StCommand(
+                        REG_RETURN_VALUE,
+                        line.result + OFFSET_TO_TEMP,
+                        REG_STATUS,
+                    ),
                 )
             elif line.op in [
                 IROperation.PLUS,
@@ -391,12 +488,12 @@ class CodeGenerator:
                 if not isinstance(line.arg1, int) or not isinstance(line.arg2, int):
                     raise CodeGenerationError("Arg1 or 2 was not an int")
                 if not isinstance(line.result, int):
-                    raise CodeGenerationError("Result was not an integer")
+                    raise CodeGenerationError("Result was not an int")
                 reg_1 = self._get_register()
                 out.append(
                     LdCommand(
                         reg_1,
-                        line.arg1 + 7,
+                        line.arg1 + OFFSET_TO_TEMP,
                         REG_STATUS,
                         "Loading first temp value",
                     ),
@@ -405,24 +502,193 @@ class CodeGenerator:
                 out.append(
                     LdCommand(
                         reg_2,
-                        line.arg2 + 7,
+                        line.arg2 + OFFSET_TO_TEMP,
                         REG_STATUS,
                         "Loading second temp value",
                     ),
                 )
-                commandBuilder = {
+                command_builder = {
                     IROperation.PLUS: AddCommand,
                     IROperation.MINUS: SubCommand,
                     IROperation.TIMES: MulCommand,
                     IROperation.DIVIDE: DivCommand,
                 }[line.op]
 
+                out_reg = self._get_register()
                 out.append(
-                    commandBuilder(
-                        REG_RETURN_VALUE,
+                    command_builder(
+                        out_reg,
                         reg_1,
                         reg_2,
-                        "Adding the two vaules and put into return",
+                        "Adding the two value and put into return",
+                    ),
+                )
+                out.append(
+                    StCommand(
+                        out_reg,
+                        line.result + OFFSET_TO_TEMP,
+                        REG_STATUS,
+                        "Putting the result into memory",
+                    ),
+                )
+            elif line.op in [
+                IROperation.EQUALS,
+                IROperation.LESS_THAN,
+            ]:
+                if not isinstance(line.arg1, int) or not isinstance(line.arg2, int):
+                    raise CodeGenerationError(  # FIXME: This breaks when using params
+                        "Arg1 or Arg2 was not an int",
+                    )
+                if not isinstance(line.result, int):
+                    raise CodeGenerationError("Result was not an int")
+                reg_1 = self._get_register()
+                reg_2 = self._get_register()
+                out_reg = self._get_register()
+                out.extend(
+                    [
+                        LdCommand(
+                            reg_1,
+                            line.arg1 + OFFSET_TO_TEMP,
+                            REG_STATUS,
+                            "Loading first temp value",
+                        ),
+                        LdCommand(
+                            reg_2,
+                            line.arg2 + OFFSET_TO_TEMP,
+                            REG_STATUS,
+                            "Loading second temp value",
+                        ),
+                        SubCommand(
+                            reg_1,
+                            reg_1,
+                            reg_2,
+                        ),
+                    ],
+                )
+
+                if line.op == IROperation.EQUALS:
+                    out.append(
+                        JeqCommand(
+                            reg_1,
+                            2,
+                            REG_PC,
+                        ),
+                    )
+                elif line.op == IROperation.LESS_THAN:
+                    out.append(
+                        JltCommand(
+                            reg_1,
+                            2,
+                            REG_PC,
+                        ),
+                    )
+                else:
+                    raise CodeGenerationError(
+                        "Expected operation to be either equals or less than",
+                    )
+
+                out.extend(
+                    [
+                        LdcCommand(
+                            out_reg,
+                            0,
+                        ),
+                        LdaCommand(
+                            REG_PC,
+                            1,
+                            REG_PC,
+                        ),
+                        LdcCommand(
+                            out_reg,
+                            1,
+                        ),
+                    ],
+                )
+
+                out.append(
+                    StCommand(
+                        out_reg,
+                        line.result + OFFSET_TO_TEMP,
+                        REG_STATUS,
+                        "Putting the result into memory",
+                    ),
+                )
+
+            elif line.op in [
+                IROperation.NOT,
+                IROperation.UNARY_MINUS,
+            ]:
+                if not isinstance(line.arg1, int):
+                    raise CodeGenerationError(  # FIXME: This breaks when using params
+                        "Arg1 was not an int",
+                    )
+                if not isinstance(line.result, int):
+                    raise CodeGenerationError("Result was not an int")
+                reg_1 = self._get_register()
+                out.append(
+                    LdCommand(
+                        reg_1,
+                        line.arg1 + OFFSET_TO_TEMP,
+                        REG_STATUS,
+                        "Loading first temp value",
+                    ),
+                )
+                out_reg = self._get_register()
+                negation_code = [
+                    LdcCommand(
+                        3,
+                        2,
+                        f"Performing {line.op} operation",
+                    ),
+                    MulCommand(
+                        3,
+                        reg_1,
+                        3,
+                    ),
+                    SubCommand(
+                        reg_1,
+                        reg_1,
+                        3,
+                    ),
+                ]
+                if line.op == IROperation.NOT:
+                    out.extend(
+                        [
+                            *negation_code,
+                            LdcCommand(
+                                3,
+                                1,
+                            ),
+                            AddCommand(
+                                out_reg,
+                                reg_1,
+                                3,
+                                "Finished NOT operation",
+                            ),
+                        ],
+                    )
+                elif line.op == IROperation.UNARY_MINUS:
+                    out.extend(
+                        [
+                            *negation_code,
+                            AddCommand(
+                                out_reg,
+                                reg_1,
+                                0,
+                            ),
+                        ],
+                    )
+                else:
+                    raise TypeError(
+                        "Expected line operation to be either not or unary minus",
+                    )
+
+                out.append(
+                    StCommand(
+                        out_reg,
+                        line.result + OFFSET_TO_TEMP,
+                        REG_STATUS,
+                        "Putting the result into memory",
                     ),
                 )
             else:
@@ -446,7 +712,7 @@ class CodeGenerator:
         )
 
     def generate(self):
-        self._code: list[TMLine] = [
+        self._code = [
             *self._generate_setup(),
             *self._generate_print_fn(),
         ]

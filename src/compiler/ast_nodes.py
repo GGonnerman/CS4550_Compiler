@@ -190,7 +190,9 @@ class ASTNode(ABC):
         self._place = place
 
     @property
-    def place(self) -> int | None:
+    def place(self) -> int:
+        if self._place is None:
+            raise ValueError(f"Cannot access unset property place on {self}")
         return self._place
 
     def set_code(self, code: list[IR]):
