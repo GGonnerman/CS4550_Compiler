@@ -12,8 +12,10 @@ class IROperation(Enum):
     NOT = auto()
     UNARY_MINUS = auto()
     SET_LITERAL = auto()
+    COPY = auto()
 
     LABEL = auto()
+    IF_NOT = auto()
     GOTO = auto()
 
 

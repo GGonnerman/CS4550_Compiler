@@ -40,13 +40,20 @@ class TMCommand(TMLine):
         self.register_section: str = register_section
         self.comment: str | None = comment
 
-        TMCommand.current_line_num += 1
+        if line_num is None:
+            TMCommand.current_line_num += 1
+
         TMCommand.max_line_size = max(TMCommand.max_line_size, len(str(self.line_num)))
         TMCommand.max_command_size = max(TMCommand.max_command_size, len(self.command))
         TMCommand.max_register_section = max(
             TMCommand.max_register_section,
             len(self.register_section),
         )
+
+    @classmethod
+    def reserve_line_num(cls) -> int:
+        TMCommand.current_line_num += 1
+        return TMCommand.current_line_num - 1
 
     def print(
         self,

@@ -37,6 +37,7 @@ from compiler.tm import (
     OutCommand,
     StCommand,
     SubCommand,
+    TMCommand,
     TMLine,
 )
 
@@ -64,6 +65,8 @@ class CodeGenerator:
         self._register: int = 0
         self._register_map: dict[int, list[int | str]] = {}
         self._label_maker: Label = Label()
+        self._goto_mapping: dict[str, int] = {}
+        self._jumps_to_complete: list[tuple[IR, int | None, int]] = []
 
     # Alternating returning reg 1-2 will work good enough for now
     def _get_register(self):
@@ -432,26 +435,68 @@ class CodeGenerator:
             IfExpression,
         ):
             expression.set_place(place)
-            self._generate_ir(expression.condition, ir)
-            self._generate_ir(expression.consequent, ir)
-            self._generate_ir(expression.alternative, ir)
 
-            label1 = self._get_label()
+            self._generate_ir(expression.condition, ir)
+            else_label = self._get_label()
+            done_label = self._get_label()
+
+            ir.append(
+                IR(
+                    else_label,
+                    expression.condition.place,
+                    IROperation.IF_NOT,
+                    None,
+                ),
+            )
+
+            self._generate_ir(expression.consequent, ir)
 
             ir.extend(
                 [
                     IR(
-                        label1,
+                        place,
+                        expression.consequent.place,
+                        IROperation.COPY,
+                        None,
+                    ),
+                    IR(
+                        done_label,
+                        expression.condition.place,
+                        IROperation.GOTO,
+                        None,
+                    ),
+                    IR(
+                        else_label,
                         None,
                         IROperation.LABEL,
                         None,
                     ),
                 ],
             )
+
+            self._generate_ir(expression.alternative, ir)
+
+            ir.extend(
+                [
+                    IR(
+                        place,
+                        expression.alternative.place,
+                        IROperation.COPY,
+                        None,
+                    ),
+                    IR(
+                        done_label,
+                        None,
+                        IROperation.LABEL,
+                        None,
+                    ),
+                ],
+            )
+
         else:
             # We'll get the current expressions working, then add
             # Labels/goto
-            # Missing types:
+            # TODO: Missing types:
             #     function call
             #     if expression
             #     and/or expressions (with short circuiting)
@@ -461,6 +506,8 @@ class CodeGenerator:
             )
 
     def _parse_ir(self, ir: list[IR]) -> list[TMLine]:
+        for line in ir:
+            print(f"* {line}")
         out: list[TMLine] = []
         for line in ir:
             if line.op == IROperation.SET_LITERAL:
@@ -691,8 +738,91 @@ class CodeGenerator:
                         "Putting the result into memory",
                     ),
                 )
+            elif line.op in [IROperation.COPY]:
+                if not isinstance(line.arg1, int):
+                    raise CodeGenerationError("Arg1 was None")
+                if not isinstance(line.result, int):
+                    raise CodeGenerationError("Result was not an int")
+                reg_1 = self._get_register()
+                out.extend(
+                    [
+                        LdCommand(
+                            reg_1,
+                            line.arg1 + OFFSET_TO_TEMP,
+                            REG_STATUS,
+                            "Copy (part 1)",
+                        ),
+                        StCommand(
+                            reg_1,
+                            line.result + OFFSET_TO_TEMP,
+                            REG_STATUS,
+                            "Copy (part 2)",
+                        ),
+                    ],
+                )
+            elif line.op in [IROperation.LABEL]:
+                if not isinstance(line.result, str):
+                    raise TypeError("Expected result to be of type string")
+                self._goto_mapping[line.result] = TMCommand.current_line_num
+            elif line.op in [IROperation.IF_NOT]:
+                if not isinstance(line.arg1, int):
+                    raise TypeError("Expected arg1 to be of type int")
+                reg = self._get_register()
+                out.append(
+                    LdCommand(
+                        reg,
+                        line.arg1 + OFFSET_TO_TEMP,
+                        REG_STATUS,
+                        "Loading condition into memeory",
+                    ),
+                )
+                self._jumps_to_complete.append(
+                    (line, reg, TMCommand.reserve_line_num()),
+                )
+            elif line.op in [IROperation.GOTO]:
+                self._jumps_to_complete.append(
+                    (line, None, TMCommand.reserve_line_num()),
+                )
             else:
-                raise CodeGenerationError("This operation has not been implemented yet")
+                raise CodeGenerationError(
+                    f"This operation has not been implemented yet: {line.op}",
+                )
+
+        for jump in self._jumps_to_complete:
+            source_line: int = jump[2]
+            condition_reg = jump[1]
+            line: IR = jump[0]
+            destination = line.result
+            if not isinstance(destination, str):
+                raise TypeError("Expected destination to be of type string")
+            destination_line = self._goto_mapping[destination]
+
+            if line.op == IROperation.GOTO:
+                out.append(
+                    LdaCommand(
+                        REG_PC,
+                        destination_line,
+                        0,
+                        "Unconditional jump",
+                        source_line,
+                    ),
+                )
+            elif line.op == IROperation.IF_NOT:
+                if not isinstance(condition_reg, int):
+                    raise TypeError("Expected condition register to be an int")
+                if not isinstance(line.arg1, int):
+                    raise TypeError("Expected arg1 to be of type int")
+                out.append(
+                    JeqCommand(
+                        condition_reg,
+                        destination_line,
+                        0,
+                        "Jump if not against conditional",
+                        source_line,
+                    ),
+                )
+            else:
+                raise TypeError("Invalid IROperation in jump map")
         return out
 
     def _generate_expression(
