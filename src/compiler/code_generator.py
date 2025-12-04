@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from compiler.ast_nodes import (
+    AndExpression,
     Body,
     BooleanLiteral,
     Definition,
@@ -14,6 +15,7 @@ from compiler.ast_nodes import (
     LessThanExpression,
     MinusExpression,
     NotExpression,
+    OrExpression,
     PlusExpression,
     Program,
     TimesExpression,
@@ -30,6 +32,7 @@ from compiler.tm import (
     HaltCommand,
     JeqCommand,
     JltCommand,
+    JneCommand,
     LdaCommand,
     LdcCommand,
     LdCommand,
@@ -408,6 +411,114 @@ class CodeGenerator:
                     expression.right_side.place,
                 ),
             )
+        elif isinstance(expression, (AndExpression)):
+            expression.set_place(place)
+            failed_cond_label = self._get_label()
+            end_label = self._get_label()
+            self._generate_ir(expression.left_side, ir)
+            ir.append(
+                IR(
+                    failed_cond_label,
+                    expression.left_side.place,
+                    IROperation.IF_NOT,
+                    None,
+                ),
+            )
+            self._generate_ir(expression.right_side, ir)
+            ir.extend(
+                [
+                    IR(
+                        failed_cond_label,
+                        expression.right_side.place,
+                        IROperation.IF_NOT,
+                        None,
+                    ),
+                    IR(
+                        expression.place,
+                        1,
+                        IROperation.SET_LITERAL,
+                        None,
+                    ),
+                    IR(
+                        end_label,
+                        None,
+                        IROperation.GOTO,
+                        None,
+                    ),
+                    IR(
+                        failed_cond_label,
+                        None,
+                        IROperation.LABEL,
+                        None,
+                    ),
+                    IR(
+                        expression.place,
+                        0,
+                        IROperation.SET_LITERAL,
+                        None,
+                    ),
+                    IR(
+                        end_label,
+                        None,
+                        IROperation.LABEL,
+                        None,
+                    ),
+                ],
+            )
+        elif isinstance(expression, (OrExpression)):
+            expression.set_place(place)
+            success_cond_label = self._get_label()
+            end_label = self._get_label()
+            self._generate_ir(expression.left_side, ir)
+            ir.append(
+                IR(
+                    success_cond_label,
+                    expression.left_side.place,
+                    IROperation.IF,
+                    None,
+                ),
+            )
+            self._generate_ir(expression.right_side, ir)
+            ir.extend(
+                [
+                    IR(
+                        success_cond_label,
+                        expression.right_side.place,
+                        IROperation.IF,
+                        None,
+                    ),
+                    IR(
+                        expression.place,
+                        0,
+                        IROperation.SET_LITERAL,
+                        None,
+                    ),
+                    IR(
+                        end_label,
+                        None,
+                        IROperation.GOTO,
+                        None,
+                    ),
+                    IR(
+                        success_cond_label,
+                        None,
+                        IROperation.LABEL,
+                        None,
+                    ),
+                    IR(
+                        expression.place,
+                        1,
+                        IROperation.SET_LITERAL,
+                        None,
+                    ),
+                    IR(
+                        end_label,
+                        None,
+                        IROperation.LABEL,
+                        None,
+                    ),
+                ],
+            )
         elif isinstance(
             expression,
             (
@@ -492,13 +603,10 @@ class CodeGenerator:
                     ),
                 ],
             )
-
         else:
             # We'll get the current expressions working, then add
-            # Labels/goto
             # TODO: Missing types:
             #     function call
-            #     if expression
             #     and/or expressions (with short circuiting)
             #     variable/using a parameter?
             raise CodeGenerationError(
@@ -764,7 +872,7 @@ class CodeGenerator:
                 if not isinstance(line.result, str):
                     raise TypeError("Expected result to be of type string")
                 self._goto_mapping[line.result] = TMCommand.current_line_num
-            elif line.op in [IROperation.IF_NOT]:
+            elif line.op in [IROperation.IF_NOT, IROperation.IF]:
                 if not isinstance(line.arg1, int):
                     raise TypeError("Expected arg1 to be of type int")
                 reg = self._get_register()
@@ -804,6 +912,20 @@ class CodeGenerator:
                         destination_line,
                         0,
                         "Unconditional jump",
+                        source_line,
+                    ),
+                )
+            elif line.op == IROperation.IF:
+                if not isinstance(condition_reg, int):
+                    raise TypeError("Expected condition register to be an int")
+                if not isinstance(line.arg1, int):
+                    raise TypeError("Expected arg1 to be of type int")
+                out.append(
+                    JneCommand(
+                        condition_reg,
+                        destination_line,
+                        0,
+                        "Jump if conditional",
                         source_line,
                     ),
                 )

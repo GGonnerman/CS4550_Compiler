@@ -15,6 +15,7 @@ class IROperation(Enum):
     COPY = auto()
 
     LABEL = auto()
+    IF = auto()
     IF_NOT = auto()
     GOTO = auto()
 
