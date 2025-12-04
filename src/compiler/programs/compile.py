@@ -39,8 +39,9 @@ def compile():  # noqa: A001
         print(e)
     except KleinError:
         print("Klein Error: unable to continue processing")
-    except Exception:  # noqa: BLE001
-        print("Klein Error: unable to continue processing")
+    except Exception as e:
+        raise e
+        # print("Klein Error: unable to continue processing")
 
     sys.exit(1)
 

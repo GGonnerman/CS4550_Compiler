@@ -10,6 +10,7 @@ from compiler.ast_nodes import (
     EqualsExpression,
     Expression,
     FunctionAnnotation,
+    FunctionCallExpression,
     IfExpression,
     IntegerLiteral,
     LessThanExpression,
@@ -69,7 +70,9 @@ class CodeGenerator:
         self._register_map: dict[int, list[int | str]] = {}
         self._label_maker: Label = Label()
         self._goto_mapping: dict[str, int] = {}
+        # Original IR line, optional conditional register, source position
         self._jumps_to_complete: list[tuple[IR, int | None, int]] = []
+        self._current_params: list[MemoryLocation] = []
 
     # Alternating returning reg 1-2 will work good enough for now
     def _get_register(self):
@@ -145,7 +148,8 @@ class CodeGenerator:
                 LdcCommand(REG_TOP, 3),
                 AddCommand(REG_TOP, REG_TOP, REG_PC),
                 StCommand(REG_TOP, 0, REG_STATUS, "Store the return address"),
-                LdaCommand(REG_TOP, 6, REG_STATUS, "Set the new top pointer"),
+                # FIXME: See line 235
+                LdaCommand(REG_TOP, 16, REG_STATUS, "Set the new top pointer"),
                 LdcCommand(7, main_location_imem, "Jump to main"),
                 # grab return value
                 OutCommand(REG_RETURN_VALUE, "Printing main return value"),
@@ -158,7 +162,7 @@ class CodeGenerator:
     def _calling_sequence_calling_fn(
         self,
         function_name: str,
-        destination_addr: int,
+        destination_addr: int | None,
         params: list[MemoryLocation],
     ) -> list[TMLine]:
         param_count = self._get_parameter_count(function_name)
@@ -225,10 +229,38 @@ class CodeGenerator:
                 LdcCommand(REG_TOP, 3),
                 AddCommand(REG_TOP, REG_TOP, REG_PC),
                 StCommand(REG_TOP, 0, REG_STATUS, "Store return address"),
-                LdaCommand(REG_TOP, 6, REG_STATUS, "Restore top reg to its real value"),
-                LdcCommand(7, destination_addr),
             ],
         )
+
+        # FIXME: This code seems to assume NO temp variables, whereas we need to allocate some
+        # variable number of temp variables. Maybe this could be stored when generating fn signatures
+        # but feels like it might need to be another "resolved later" type thing...
+        code.append(
+            LdaCommand(REG_TOP, 16, REG_STATUS, "Restore top reg to its real value"),
+        )
+
+        print(f"* Consider call to {function_name}")
+
+        if isinstance(destination_addr, int):
+            print("* Call was direct")
+            code.append(
+                LdcCommand(7, destination_addr),
+            )
+        else:
+            print("* Call was via name")
+            self._jumps_to_complete.append(
+                (
+                    IR(
+                        function_name,
+                        None,
+                        IROperation.GOTO,
+                        None,
+                    ),
+                    None,
+                    TMCommand.reserve_line_num(),
+                ),
+            )
+
         return code
 
     def _calling_sequence_called_fn(self) -> list[TMLine]:
@@ -283,7 +315,7 @@ class CodeGenerator:
     def _generate_function_call(
         self,
         function_name: str,
-        destination_addr: int,
+        destination_addr: int | None,
         params: list[MemoryLocation],
     ) -> list[TMLine]:
         return [
@@ -298,13 +330,14 @@ class CodeGenerator:
         ]
 
     def _generate_function(self, definition: Definition) -> list[TMLine]:
-        main_param_count = self._get_parameter_count("main")
+        main_param_count = self._get_parameter_count(definition.name.value)
         print_location_imem = 10 + 2 * main_param_count
         code: list[TMLine] = []
         code.append(Comment(""))
         code.append(Comment(f"Function: {definition.name.value}"))
         code.append(Comment(""))
         param_count = len(definition.parameters.parameters)
+        self._goto_mapping[definition.name.value] = TMCommand.current_line_num
         code.extend(self._calling_sequence_called_fn())
         # This is likely the main section of code that will be re-written for next
         # module. This only works in limited use case of any number of print calls
@@ -603,11 +636,39 @@ class CodeGenerator:
                     ),
                 ],
             )
+        elif isinstance(expression, FunctionCallExpression):
+            expression.set_place(place)
+            # Generate the values for all arguments
+            for argument in expression.argument_list.arguments:
+                self._generate_ir(argument.value, ir)
+
+            # Add the arguments as params
+            for argument in expression.argument_list.arguments:
+                ir.append(  # noqa: PERF401
+                    IR(
+                        argument.value.place,
+                        None,
+                        IROperation.PARAM,
+                        None,
+                    ),
+                )
+
+            argument_count = len(expression.argument_list.arguments)
+
+            ir.extend(
+                [
+                    IR(
+                        expression.place,
+                        expression.function_name.value,
+                        IROperation.CALL,
+                        argument_count,
+                    ),
+                ],
+            )
         else:
             # We'll get the current expressions working, then add
             # TODO: Missing types:
             #     function call
-            #     and/or expressions (with short circuiting)
             #     variable/using a parameter?
             raise CodeGenerationError(
                 f"Generating code for expression of type {expression.__class__.__name__} is not yet implemented",
@@ -891,11 +952,66 @@ class CodeGenerator:
                 self._jumps_to_complete.append(
                     (line, None, TMCommand.reserve_line_num()),
                 )
+            elif line.op in [IROperation.PARAM]:
+                if not isinstance(line.result, int):
+                    raise TypeError("Expected param to be an int")
+                self._current_params.append(
+                    MemoryLocation(
+                        "dmem",
+                        line.result + OFFSET_TO_TEMP,
+                    ),
+                )
+            elif line.op in [IROperation.CALL]:
+                if not isinstance(line.result, int):
+                    raise TypeError("Expected call result to be an int")
+                if not isinstance(line.arg1, str):
+                    raise TypeError("Expected call arg to be a function name")
+                if not isinstance(line.arg2, int):
+                    raise TypeError("Expected call arg 2 to be number of params")
+
+                params = self._current_params.copy()
+                self._current_params.clear()
+                out.extend(
+                    self._generate_function_call(
+                        line.arg1,
+                        None,
+                        params,
+                    ),
+                )
+                out.append(
+                    StCommand(
+                        REG_RETURN_VALUE,
+                        line.result + OFFSET_TO_TEMP,
+                        REG_STATUS,
+                    ),
+                )
+
+            # def _generate_function_call(
+            #    self,
+            #    function_name: str,
+            #    destination_addr: int,
+            #    params: list[MemoryLocation],
+            # ) -> list[TMLine]:
+            #    return [
+            #        Comment(f"Calling {function_name}"),
+            #        *self._calling_sequence_calling_fn(
+            #            function_name,
+            #            destination_addr,
+            #            params,
+            #        ),
+            #        *self._return_sequence_calling_fn(),
+            #        Comment(f"Returning from {function_name}"),
+            #    ]
             else:
                 raise CodeGenerationError(
                     f"This operation has not been implemented yet: {line.op}",
                 )
+        return out
 
+    def _resolve_jumps(self) -> list[TMLine]:
+        out: list[TMLine] = []
+        # Go back through and resolve all the jump since we now know the exact
+        # line number to jump to
         for jump in self._jumps_to_complete:
             source_line: int = jump[2]
             condition_reg = jump[1]
@@ -970,6 +1086,8 @@ class CodeGenerator:
         ]
         for definition in self._ast.definition_list:
             self._code.extend(self._generate_function(definition))
+
+        self._code.extend(self._resolve_jumps())
 
         for line in self._code:
             line.print()

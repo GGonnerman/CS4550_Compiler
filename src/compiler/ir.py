@@ -14,6 +14,9 @@ class IROperation(Enum):
     SET_LITERAL = auto()
     COPY = auto()
 
+    PARAM = auto()
+    CALL = auto()
+
     LABEL = auto()
     IF = auto()
     IF_NOT = auto()
