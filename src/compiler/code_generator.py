@@ -74,6 +74,9 @@ class CodeGenerator:
         self._jumps_to_complete: list[tuple[IR, int | None, int]] = []
         self._current_params: list[MemoryLocation] = []
 
+        self._topoffsets_to_complete: list[tuple[str, int]] = []
+        self._topoffsets: dict[str, int] = {}
+
     # Alternating returning reg 1-2 will work good enough for now
     def _get_register(self):
         self._register += 1
@@ -148,8 +151,16 @@ class CodeGenerator:
                 LdcCommand(REG_TOP, 3),
                 AddCommand(REG_TOP, REG_TOP, REG_PC),
                 StCommand(REG_TOP, 0, REG_STATUS, "Store the return address"),
-                # FIXME: See line 235
-                LdaCommand(REG_TOP, 16, REG_STATUS, "Set the new top pointer"),
+            ],
+        )
+
+        self._topoffsets_to_complete.append(
+            ("main", TMCommand.reserve_line_num()),
+        )
+        # LdaCommand(REG_TOP, 6, REG_STATUS, "Set the new top pointer"),
+
+        code.extend(
+            [
                 LdcCommand(7, main_location_imem, "Jump to main"),
                 # grab return value
                 OutCommand(REG_RETURN_VALUE, "Printing main return value"),
@@ -232,11 +243,28 @@ class CodeGenerator:
             ],
         )
 
-        # FIXME: This code seems to assume NO temp variables, whereas we need to allocate some
-        # variable number of temp variables. Maybe this could be stored when generating fn signatures
-        # but feels like it might need to be another "resolved later" type thing...
-        code.append(
-            LdaCommand(REG_TOP, 16, REG_STATUS, "Restore top reg to its real value"),
+        # The Question: How do we know how many temporary variable will have to
+        # be placed on the stack.
+        # * Option A: We don't and it should be backpatched
+        #           Even with backpatching, how would we generate this value since
+        #           we could use a "smart" register allocation which is not
+        #           1:1 with our temporary variables.
+        #           Assuming worst case that every temp variable needs to be
+        #           stored on the stack might be the best option.
+        # Option B: Increase the top everytime we place smt on the stack
+        #           if it would be past the current top. This feels like
+        #           re-implementing too much though.
+        # Option C: Multiple passes to count how many temp variables are needed.
+        #           (https://www.geeksforgeeks.org/compiler-design/liveliness-analysis-in-compiler-design/)
+        # code.append(
+        #     LdaCommand(REG_TOP, 6, REG_STATUS, "Restore top reg to its real value"),
+        # )
+
+        self._topoffsets_to_complete.append(
+            (
+                function_name,
+                TMCommand.reserve_line_num(),
+            ),
         )
 
         print(f"* Consider call to {function_name}")
@@ -300,6 +328,7 @@ class CodeGenerator:
     def _generate_print_fn(self) -> list[TMLine]:
         param_count = self._get_parameter_count("print")
         selected_reg = self._select_tmp()
+        self._topoffsets["print"] = 0
         commands: list[TMLine] = [
             Comment(""),
             Comment("Function: print"),
@@ -371,6 +400,8 @@ class CodeGenerator:
         self._reset_temps()
         self._generate_ir(body.body, ir)
         code.extend(self._parse_ir(ir))
+        temp_spots_required = self._tmp_count
+        self._topoffsets[definition.name.value] = temp_spots_required
         code.append(
             LdCommand(
                 REG_RETURN_VALUE,
@@ -1063,6 +1094,23 @@ class CodeGenerator:
                 raise TypeError("Invalid IROperation in jump map")
         return out
 
+    def _resolve_offsets(self) -> list[TMLine]:
+        out: list[TMLine] = []
+        for offset in self._topoffsets_to_complete:
+            fn_name = offset[0]
+            line_num = offset[1]
+            temp_offset = self._topoffsets[fn_name]
+            out.append(
+                LdaCommand(
+                    REG_TOP,
+                    temp_offset + 6,
+                    REG_STATUS,
+                    "Restore top reg to its real value",
+                    line_num,
+                ),
+            )
+        return out
+
     def _generate_expression(
         self,
         expression: Expression,
@@ -1088,6 +1136,8 @@ class CodeGenerator:
             self._code.extend(self._generate_function(definition))
 
         self._code.extend(self._resolve_jumps())
+
+        self._code.extend(self._resolve_offsets())
 
         for line in self._code:
             line.print()
