@@ -62,9 +62,6 @@ class MemoryLocation:
     position: int
 
 
-# FIXME: Functions with functions being passed as an argument doesn't work currently
-
-
 class CodeGenerator:
     def __init__(self, ast: Program, symbol_table: SymbolTable):
         self._ast: Program = ast
@@ -72,7 +69,6 @@ class CodeGenerator:
         self._code: list[TMLine] = []
         self._tmp_count: int = 0
         self._register: int = 0
-        self._register_map: dict[int, list[int | str]] = {}
         self._label_maker: Label = Label()
         self._goto_mapping: dict[str, int] = {}
         # Original IR line, optional conditional register, source position
@@ -85,7 +81,7 @@ class CodeGenerator:
         self._current_fn_context: dict[str, int] = {}
 
     # Alternating returning reg 1-2 will work good enough for now
-    def _get_register(self):
+    def _get_register(self) -> int:
         self._register += 1
         return (self._register % 2) + 1
 
@@ -300,23 +296,6 @@ class CodeGenerator:
             ],
         )
 
-        # The Question: How do we know how many temporary variable will have to
-        # be placed on the stack.
-        # * Option A: We don't and it should be backpatched
-        #           Even with backpatching, how would we generate this value since
-        #           we could use a "smart" register allocation which is not
-        #           1:1 with our temporary variables.
-        #           Assuming worst case that every temp variable needs to be
-        #           stored on the stack might be the best option.
-        # Option B: Increase the top everytime we place smt on the stack
-        #           if it would be past the current top. This feels like
-        #           re-implementing too much though.
-        # Option C: He talked about in class to use multiple passes to count how many temp variables are needed.
-        #
-        # code.append(
-        #     LdaCommand(REG_TOP, 6, REG_STATUS, "Restore top reg to its real value"),
-        # )
-
         self._topoffsets_to_complete.append(
             (
                 function_name,
@@ -467,7 +446,8 @@ class CodeGenerator:
         self._generate_ir(body.body, ir)
         code.extend(self._parse_ir(ir))
         temp_spots_required = max(temp_spots_required, self._tmp_count)
-        self._topoffsets[definition.name.value] = temp_spots_required
+        self._topoffsets[definition.name.value] = temp_spots_required + 1
+        # +1 is required here because we don't use offset 0
         code.append(
             LdCommand(
                 REG_RETURN_VALUE,
@@ -501,22 +481,14 @@ class CodeGenerator:
         expression: Expression,
         ir: list[IR],
     ) -> None:
-        place = self._make_new_temp()
         if isinstance(expression, Identifier):
-            # expression.set_place(self._current_fn_context[expression.value])
-            expression.set_place(place)
-            ir.append(
-                IR(
-                    place,
-                    # -OFFSET_TO_TEMP is required since we normally assume we're working
-                    # in the temp area, but here we're in the param section
-                    self._current_fn_context[expression.value] - OFFSET_TO_TEMP,
-                    IROperation.COPY,
-                    None,
-                ),
+            expression.set_place(
+                self._current_fn_context[expression.value] - OFFSET_TO_TEMP,
             )
-            # Early exit to avoid allocation a new temp when unnecessary
-        elif isinstance(expression, IntegerLiteral):
+            ## Early exit to avoid allocation a new temp when unnecessary
+            return
+        place = self._make_new_temp()
+        if isinstance(expression, IntegerLiteral):
             expression.set_place(place)
             ir.append(IR(place, int(expression.value), IROperation.SET_LITERAL, None))
         elif isinstance(expression, BooleanLiteral):

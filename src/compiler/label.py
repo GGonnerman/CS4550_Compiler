@@ -48,4 +48,5 @@ class Label:
                 raise Exception("All possible labels have been generated")  # noqa: TRY002
             label = self._get_label()
             if label not in self._generated_labels:
+                self._generated_labels.add(label)
                 return label
