@@ -189,6 +189,9 @@ class ASTNode(ABC):
     def set_place(self, place: int):
         self._place = place
 
+    def has_place(self) -> bool:
+        return self._place is None
+
     @property
     def place(self) -> int:
         if self._place is None:

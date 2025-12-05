@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from math import ceil
 from typing import Literal
 
 from compiler.ast_nodes import (
@@ -11,6 +12,7 @@ from compiler.ast_nodes import (
     Expression,
     FunctionAnnotation,
     FunctionCallExpression,
+    Identifier,
     IfExpression,
     IntegerLiteral,
     LessThanExpression,
@@ -60,6 +62,9 @@ class MemoryLocation:
     position: int
 
 
+# FIXME: Functions with functions being passed as an argument doesn't work currently
+
+
 class CodeGenerator:
     def __init__(self, ast: Program, symbol_table: SymbolTable):
         self._ast: Program = ast
@@ -76,6 +81,8 @@ class CodeGenerator:
 
         self._topoffsets_to_complete: list[tuple[str, int]] = []
         self._topoffsets: dict[str, int] = {}
+
+        self._current_fn_context: dict[str, int] = {}
 
     # Alternating returning reg 1-2 will work good enough for now
     def _get_register(self):
@@ -118,21 +125,57 @@ class CodeGenerator:
             StCommand(REG_TOP, top_offset_from_top, REG_TOP, "Store current top"),
         ]
         # Move all arguments down 1 slot in DMEM
-        for i in range(1, param_count + 1):
+        # and reverse the order (so actually move it down via #params - 1)
+        if param_count >= 1:
             selected_reg = self._select_tmp()
             code.extend(
                 [
                     LdCommand(
                         selected_reg,
-                        param_count - i,
+                        0,
+                        REG_TOP,
+                        "Copy arg #0",
+                    ),
+                    StCommand(
+                        selected_reg,
+                        param_count,
+                        REG_TOP,
+                        "Move to opposite position",
+                    ),
+                ],
+            )
+
+        for i in range(1, ceil(param_count / 2)):
+            swap_reg_1 = 1
+            swap_reg_2 = 2
+            # Get the position of the 2 element we're going to swap
+            lower_pos = i
+            upper_pos = param_count - i
+            code.extend(
+                [
+                    LdCommand(
+                        swap_reg_1,
+                        lower_pos,
+                        REG_TOP,
+                        f"Copy arg #{i}",
+                    ),
+                    LdCommand(
+                        swap_reg_2,
+                        upper_pos,
                         REG_TOP,
                         f"Copy arg #{param_count - i}",
                     ),
                     StCommand(
-                        selected_reg,
-                        param_count - i + 1,
+                        swap_reg_1,
+                        upper_pos,
                         REG_TOP,
-                        "Move to next position",
+                        "Move to opposite position",
+                    ),
+                    StCommand(
+                        swap_reg_2,
+                        lower_pos,
+                        REG_TOP,
+                        "Move to opposite position",
                     ),
                 ],
             )
@@ -219,12 +262,26 @@ class CodeGenerator:
                             REG_STATUS,
                             status_offset_from_top,
                             REG_TOP,
+                            "restoring status since it changed",
                         ),
                     )
                 # Use reg status as in between variable, knowing it gets restored if
                 # it has been changed
-                code.append(LdCommand(REG_STATUS, param.position, REG_STATUS))
-                code.append(StCommand(REG_STATUS, param_offset_in_dmem, REG_TOP))
+                code.append(
+                    LdCommand(
+                        REG_STATUS,
+                        param.position,
+                        REG_STATUS,
+                    ),
+                )
+                code.append(
+                    StCommand(
+                        REG_STATUS,
+                        param_offset_in_dmem,
+                        REG_TOP,
+                    ),
+                )
+                has_changed_status = True
 
         code.extend(
             [
@@ -254,8 +311,8 @@ class CodeGenerator:
         # Option B: Increase the top everytime we place smt on the stack
         #           if it would be past the current top. This feels like
         #           re-implementing too much though.
-        # Option C: Multiple passes to count how many temp variables are needed.
-        #           (https://www.geeksforgeeks.org/compiler-design/liveliness-analysis-in-compiler-design/)
+        # Option C: He talked about in class to use multiple passes to count how many temp variables are needed.
+        #
         # code.append(
         #     LdaCommand(REG_TOP, 6, REG_STATUS, "Restore top reg to its real value"),
         # )
@@ -359,7 +416,7 @@ class CodeGenerator:
         ]
 
     def _generate_function(self, definition: Definition) -> list[TMLine]:
-        main_param_count = self._get_parameter_count(definition.name.value)
+        main_param_count = self._get_parameter_count("main")
         print_location_imem = 10 + 2 * main_param_count
         code: list[TMLine] = []
         code.append(Comment(""))
@@ -367,6 +424,12 @@ class CodeGenerator:
         code.append(Comment(""))
         param_count = len(definition.parameters.parameters)
         self._goto_mapping[definition.name.value] = TMCommand.current_line_num
+        self._current_fn_context = {}
+        for idx, param in enumerate(definition.parameters):
+            # This corresponds to the offset in memory from status where this variable
+            # can be found in the stack frame.
+            self._current_fn_context[param.name.value] = -1 - idx
+
         code.extend(self._calling_sequence_called_fn())
         # This is likely the main section of code that will be re-written for next
         # module. This only works in limited use case of any number of print calls
@@ -436,7 +499,21 @@ class CodeGenerator:
         ir: list[IR],
     ) -> None:
         place = self._make_new_temp()
-        if isinstance(expression, IntegerLiteral):
+        if isinstance(expression, Identifier):
+            # expression.set_place(self._current_fn_context[expression.value])
+            expression.set_place(place)
+            ir.append(
+                IR(
+                    place,
+                    # -OFFSET_TO_TEMP is required since we normally assume we're working
+                    # in the temp area, but here we're in the param section
+                    self._current_fn_context[expression.value] - OFFSET_TO_TEMP,
+                    IROperation.COPY,
+                    None,
+                ),
+            )
+            # Early exit to avoid allocation a new temp when unnecessary
+        elif isinstance(expression, IntegerLiteral):
             expression.set_place(place)
             ir.append(IR(place, int(expression.value), IROperation.SET_LITERAL, None))
         elif isinstance(expression, BooleanLiteral):
@@ -699,8 +776,8 @@ class CodeGenerator:
         else:
             # We'll get the current expressions working, then add
             # TODO: Missing types:
-            #     function call
             #     variable/using a parameter?
+            # Now, how to reference a variable...
             raise CodeGenerationError(
                 f"Generating code for expression of type {expression.__class__.__name__} is not yet implemented",
             )
@@ -718,7 +795,6 @@ class CodeGenerator:
                 out.append(
                     LdcCommand(REG_RETURN_VALUE, line.arg1, "Loading literal"),
                 )
-                # FIXME: Technically, here we veer into the next stack-frame because we never modify our top (or set it to account for this size...)
                 out.append(
                     StCommand(
                         REG_RETURN_VALUE,
@@ -958,6 +1034,12 @@ class CodeGenerator:
                             REG_STATUS,
                             "Copy (part 2)",
                         ),
+                        AddCommand(
+                            REG_RETURN_VALUE,
+                            0,
+                            reg_1,
+                            "Copying also into return reg",
+                        ),
                     ],
                 )
             elif line.op in [IROperation.LABEL]:
@@ -1017,22 +1099,6 @@ class CodeGenerator:
                     ),
                 )
 
-            # def _generate_function_call(
-            #    self,
-            #    function_name: str,
-            #    destination_addr: int,
-            #    params: list[MemoryLocation],
-            # ) -> list[TMLine]:
-            #    return [
-            #        Comment(f"Calling {function_name}"),
-            #        *self._calling_sequence_calling_fn(
-            #            function_name,
-            #            destination_addr,
-            #            params,
-            #        ),
-            #        *self._return_sequence_calling_fn(),
-            #        Comment(f"Returning from {function_name}"),
-            #    ]
             else:
                 raise CodeGenerationError(
                     f"This operation has not been implemented yet: {line.op}",
@@ -1105,7 +1171,7 @@ class CodeGenerator:
                     REG_TOP,
                     temp_offset + 6,
                     REG_STATUS,
-                    "Restore top reg to its real value",
+                    "Set the new top pointer",
                     line_num,
                 ),
             )
@@ -1132,8 +1198,16 @@ class CodeGenerator:
             *self._generate_setup(),
             *self._generate_print_fn(),
         ]
+
+        # We always want the main fn to come first in memory, both for convinence
+        # /hardcoding purposes and to match our defined imem spec.
         for definition in self._ast.definition_list:
-            self._code.extend(self._generate_function(definition))
+            if definition.name.value == "main":
+                self._code.extend(self._generate_function(definition))
+
+        for definition in self._ast.definition_list:
+            if definition.name.value != "main":
+                self._code.extend(self._generate_function(definition))
 
         self._code.extend(self._resolve_jumps())
 
