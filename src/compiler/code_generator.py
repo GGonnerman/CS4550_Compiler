@@ -436,10 +436,13 @@ class CodeGenerator:
         # with integer literal arguments and a return value
         body: Body = definition.body
         ir: list[IR]
+        temp_spots_required: int = 0
         for print_expr in body.print_expressions:
+            self._reset_temps()
             ir = []
             self._generate_ir(print_expr.argument_list.arguments[0].value, ir)
             argument_code: list[TMLine] = self._parse_ir(ir)
+            temp_spots_required = max(temp_spots_required, self._tmp_count)
 
             code.extend(argument_code)
 
@@ -459,11 +462,11 @@ class CodeGenerator:
                     [MemoryLocation("register", REG_RETURN_VALUE)],
                 ),
             )
-        ir = []
         self._reset_temps()
+        ir = []
         self._generate_ir(body.body, ir)
         code.extend(self._parse_ir(ir))
-        temp_spots_required = self._tmp_count
+        temp_spots_required = max(temp_spots_required, self._tmp_count)
         self._topoffsets[definition.name.value] = temp_spots_required
         code.append(
             LdCommand(
