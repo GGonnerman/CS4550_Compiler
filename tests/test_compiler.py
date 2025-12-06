@@ -110,6 +110,33 @@ def test_sum_factors():
     )
 
 
+def test_factors():
+    run_program(
+        FileTestParams(
+            "factors",
+            ["18"],
+            ["1", "2", "3", "6", "9", "18"],
+        ),
+    )
+
+
+def test_euclid():
+    run_program(
+        FileTestParams(
+            "euclid",
+            ["138", "624"],
+            ["6"],
+        ),
+    )
+    run_program(
+        FileTestParams(
+            "euclid",
+            ["624", "624"],
+            ["624"],
+        ),
+    )
+
+
 def test_is_excellent():
     run_program(
         FileTestParams(
@@ -152,6 +179,57 @@ def test_sieve():
     )
 
 
+def test_sieve_no_cli():
+    run_program(
+        FileTestParams(
+            "sieve-no-cli",
+            ["7"],
+            [
+                "2",
+                "3",
+                "0",
+                "5",
+                "0",
+                "7",
+                "0",
+                "0",
+                "0",
+                "11",
+                "0",
+                "13",
+                "0",
+                "0",
+                "0",
+                "17",
+                "0",
+                "19",
+                "0",
+                "0",
+                "0",
+                "23",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "29",
+                "0",
+                "31",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "37",
+                "0",
+                "0",
+                "0",
+                "1",
+            ],
+        ),
+    )
+
+
 def test_farey():
     run_program(
         FileTestParams(
@@ -181,6 +259,23 @@ def test_is_special():
         FileTestParams(
             "is-special",
             ["17"],
+            ["0"],
+        ),
+    )
+
+
+def test_divisible_by_seven():
+    run_program(
+        FileTestParams(
+            "divisible-by-seven",
+            ["42"],
+            ["1"],
+        ),
+    )
+    run_program(
+        FileTestParams(
+            "divisible-by-seven",
+            ["45"],
             ["0"],
         ),
     )

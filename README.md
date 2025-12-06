@@ -33,7 +33,7 @@ Produced by the **Compile Squad**
 
 #### Running kleinc on a klein source code file to compile it
 
-> Note: It is _highly_ recommended that the DMEM and IMEM address sizes within the TM virtual machine be increased from the default values (1024) to larger values (e.g., 1024000). Technically this is not required, but the number of programs that can be run without increasing these limits is relatively small.
+> Important Note: It is **highly** recommended that the DMEM and IMEM address sizes within the TM virtual machine be increased from the default values (1024) to larger values (e.g., 1024000). Technically this is not required, but the number of programs that can be run without increasing these limits is relatively small.
 
 - Ensure that the `kleinc` file in the project root is executable
   - If not, running `chmod +x kleinc` should make it
