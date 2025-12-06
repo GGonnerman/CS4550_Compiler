@@ -298,15 +298,11 @@ class CodeGenerator:
             ),
         )
 
-        print(f"* Consider call to {function_name}")
-
         if isinstance(destination_addr, int):
-            print("* Call was direct")
             code.append(
                 LdcCommand(7, destination_addr),
             )
         else:
-            print("* Call was via name")
             self._jumps_to_complete.append(
                 (
                     IR(
