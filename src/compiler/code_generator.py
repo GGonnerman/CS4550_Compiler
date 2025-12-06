@@ -102,17 +102,15 @@ class CodeGenerator:
     def _get_label(self) -> str:
         return self._label_maker.get_label()
 
-    # NOTE: Technically, this code is very similar to the "_generate_function_call"
-    # method, with the main difference being the loading of arguments. However,
-    # I think breaking it into smaller function risks obscuring the flow too much
-    # such that repeated code is acceptable in this case.
     def _generate_setup(self) -> list[TMLine]:
         param_count: int = self._get_parameter_count("main")
 
-        # In theory, this section would be somehow extracted during the function
-        # generation process, though that seems to be part of the "next steps".
-        main_location_imem = 21 + 2 * param_count
-        # Explanation: Moving each param for main costs 2 lines (load into reg + store to new dmem slot)
+        imem_offset_for_params = 0
+        if param_count > 0:
+            imem_offset_for_params += 2
+        if param_count > 1:
+            imem_offset_for_params += 4 * ceil((param_count - 2) / 2)
+        main_location_imem = 21 + imem_offset_for_params
 
         top_offset_from_top: int = param_count + REG_TOP
         return_addr_offset_from_top: int = 1 + param_count
@@ -175,7 +173,7 @@ class CodeGenerator:
                     ),
                 ],
             )
-        # testing purposes.
+
         code.extend(
             [
                 LdaCommand(
@@ -196,14 +194,11 @@ class CodeGenerator:
         self._topoffsets_to_complete.append(
             ("main", TMCommand.reserve_line_num()),
         )
-        # LdaCommand(REG_TOP, 6, REG_STATUS, "Set the new top pointer"),
 
         code.extend(
             [
                 LdcCommand(7, main_location_imem, "Jump to main"),
-                # grab return value
                 OutCommand(REG_RETURN_VALUE, "Printing main return value"),
-                # halt
                 HaltCommand(),
             ],
         )
@@ -410,9 +405,6 @@ class CodeGenerator:
             self._current_fn_context[param.name.value] = -1 - idx
 
         code.extend(self._calling_sequence_called_fn())
-        # This is likely the main section of code that will be re-written for next
-        # module. This only works in limited use case of any number of print calls
-        # with integer literal arguments and a return value
         body: Body = definition.body
         ir: list[IR]
         temp_spots_required: int = 0
@@ -475,8 +467,8 @@ class CodeGenerator:
         return self._tmp_count
 
     # Instead of generating expressions directly as code, we will generate 3AC (3 address code)
-    # NOTE: This function *modified* the argument ir's original list!
-    def _generate_ir(
+    # NOTE: This function *modifies* the argument ir's original list!
+    def _generate_ir(  # noqa: C901, PLR0915
         self,
         expression: Expression,
         ir: list[IR],
@@ -749,17 +741,11 @@ class CodeGenerator:
                 ],
             )
         else:
-            # We'll get the current expressions working, then add
-            # TODO: Missing types:
-            #     variable/using a parameter?
-            # Now, how to reference a variable...
             raise CodeGenerationError(
                 f"Generating code for expression of type {expression.__class__.__name__} is not yet implemented",
             )
 
-    def _parse_ir(self, ir: list[IR]) -> list[TMLine]:
-        for line in ir:
-            print(f"* {line}")
+    def _parse_ir(self, ir: list[IR]) -> list[TMLine]:  # noqa: C901, PLR0912, PLR0915
         out: list[TMLine] = []
         for line in ir:
             if line.op == IROperation.SET_LITERAL:
@@ -834,7 +820,7 @@ class CodeGenerator:
                 IROperation.LESS_THAN,
             ]:
                 if not isinstance(line.arg1, int) or not isinstance(line.arg2, int):
-                    raise CodeGenerationError(  # FIXME: This breaks when using params
+                    raise CodeGenerationError(
                         "Arg1 or Arg2 was not an int",
                     )
                 if not isinstance(line.result, int):
@@ -917,7 +903,7 @@ class CodeGenerator:
                 IROperation.UNARY_MINUS,
             ]:
                 if not isinstance(line.arg1, int):
-                    raise CodeGenerationError(  # FIXME: This breaks when using params
+                    raise CodeGenerationError(
                         "Arg1 was not an int",
                     )
                 if not isinstance(line.result, int):
@@ -1136,6 +1122,8 @@ class CodeGenerator:
         return out
 
     def _resolve_offsets(self) -> list[TMLine]:
+        # Go back through and resolve all of the top offsets, since we know
+        # know exactly how many temp variables each function needs.
         out: list[TMLine] = []
         for offset in self._topoffsets_to_complete:
             fn_name = offset[0]
@@ -1151,22 +1139,6 @@ class CodeGenerator:
                 ),
             )
         return out
-
-    def _generate_expression(
-        self,
-        expression: Expression,
-        into_reg: int,
-    ) -> list[TMLine]:
-        if isinstance(expression, IntegerLiteral):
-            return [LdcCommand(into_reg, int(expression.value))]
-        if isinstance(expression, BooleanLiteral):
-            # 1 represents true for a boolean; 0 represents false
-            if expression.value == "true":
-                return [LdcCommand(into_reg, 1)]
-            return [LdcCommand(into_reg, 0)]
-        raise CodeGenerationError(
-            f"Generating code for expression of type {expression.__class__.__name__} is not yet implemented",
-        )
 
     def generate(self):
         self._code = [

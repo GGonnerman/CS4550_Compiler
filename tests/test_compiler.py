@@ -21,7 +21,7 @@ def create_and_run_program(
     output: list[str],
 ):
     temp_filename = "temp"
-    with open(base_path / f"{temp_filename}.kln", "w+") as outfile:
+    with open(base_path / f"{temp_filename}.kln", "w+") as outfile:  # noqa: PTH123
         _ = outfile.write(contents)
     obj = FileTestParams(
         temp_filename,
@@ -45,7 +45,7 @@ def run_file(obj: FileTestParams, program_path: Path):
     # We never want to be testing 'stale' tm files if things fail to build
     generated_tm_file.unlink(missing_ok=True)
 
-    res = subprocess.run(
+    res = subprocess.run(  # noqa: S603
         [kleinc_path, file_path],
         check=False,
         stdout=subprocess.PIPE,
@@ -54,9 +54,9 @@ def run_file(obj: FileTestParams, program_path: Path):
     )
 
     if res:
-        raise Exception(f"Failed to compile klein program\n{res}")
+        raise Exception(f"Failed to compile klein program\n{res}")  # noqa: TRY002
 
-    res = subprocess.run(
+    res = subprocess.run(  # noqa: S603
         [tm_cli_path, file_path, *obj.arguments],
         check=False,
         stdout=subprocess.PIPE,
@@ -325,6 +325,31 @@ def test_or_shortcircuit():
         [],
         ["1"],
     )
+
+
+def test_arg_count():
+    opts = [
+        ("a", "123"),
+        ("b", "345"),
+        ("c", "456"),
+        ("d", "567"),
+        ("e", "678"),
+        ("f", "789"),
+        ("g", "890"),
+    ]
+    for i in range(1, len(opts)):
+        params = " : integer, ".join(opt[0] for opt in opts[:i]) + ": integer"
+        args = [opt[1] for opt in opts[:i]]
+        prints = "\n".join(f"print({opt[0]})" for opt in opts[:i])
+        create_and_run_program(
+            f"""
+        function main({params}): boolean
+            {prints}
+            false
+        """,
+            args,
+            [*args, "0"],
+        )
 
 
 def test_arg_order():

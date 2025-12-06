@@ -33,6 +33,8 @@ Produced by the **Compile Squad**
 
 #### Running kleinc on a klein source code file to compile it
 
+> Note: It is _highly_ recommended that the DMEM and IMEM address sizes within the TM virtual machine be increased from the default values (1024) to larger values (e.g., 1024000). Technically this is not required, but the number of programs that can be run without increasing these limits is relatively small.
+
 - Ensure that the `kleinc` file in the project root is executable
   - If not, running `chmod +x kleinc` should make it
 - From the root, you can now run `./kleinc path/to/source.kln`. The `.kln` extension is optional in this command and it will still detect the file without it being there.
@@ -81,6 +83,7 @@ Produced by the **Compile Squad**
   - `semantic_analyzer.py`: Takes in a program and generates a symbol table and detects any semantic errors
   - `tm.py`: A collection of classes to easily build lines of TM code or comments
   - `code_generator.py`: Generates TM code from an AST and a symbol table
+  - `ir.py`: Classes used in the intermediate representation of the compiler
 - `src/compiler/programs`: The home for all user-facing program source code
   - `token_lister.py`: Takes in a program and prints its token in an easily readable format
   - `validator.py`: Takes in a program and prints whether it is a valid klein program or what issues arose when parsing
@@ -128,6 +131,7 @@ Produced by the **Compile Squad**
 - `programs/semantic-errors.kln`: A program with every possible semantic error (Module 4)
 - `programs/fixed-semantic-errors.kln`: The above program with all semantic errors fixed (Module 4)
 - `programs/print-one.kln`: A simple program used for testing code generation (Module 5)
+- `programs/Perfect_Square.kln`: A program to determine if an input value is a perfect square (Module 6)
 
 #### Test Files
 
@@ -135,6 +139,8 @@ Produced by the **Compile Squad**
 - `tests/test_position.py`: contains a few tests for the position tracker
 - `tests/test_parser.py`: contains a number of tests for the parser
 - `tests/test_semantic_analyzer.py`: contains a number of tests for the semantic analyzer
+- `tests/test_compiler.py`: contains a number of tests for the full compiler
+- `tests/tm-cli-go`: a tm runner used in as part of the compiler testing
 - `tests/programs/`: contains professor provided klein programs (used in testing)
 
 ## Interested in Code Generation, TM, and Memory Management?
