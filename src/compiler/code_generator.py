@@ -80,10 +80,43 @@ class CodeGenerator:
 
         self._current_fn_context: dict[str, int] = {}
 
+        # Register -> location of value in register
+        self._register_map: dict[int, list[int]] = {}
+
+    def _add_to_reg_map(self, register_id: int, temp_value: int) -> None:
+        if register_id not in self._register_map:
+            self._register_map[register_id] = []
+        self._register_map[register_id].append(temp_value)
+
+    def _is_in_register(self, temp_var: int) -> int | None:
+        for register, contents in self._register_map.items():
+            if temp_var in contents:
+                return register
+        return None
+
     # Alternating returning reg 1-2 will work good enough for now
-    def _get_register(self) -> int:
+    def _get_register(self) -> tuple[int, list[TMLine]]:
+        out: list[TMLine] = []
         self._register += 1
-        return (self._register % 2) + 1
+        chosen_register_id = (self._register % 3) + 1
+        chosen_register = (
+            self._register_map[chosen_register_id]
+            if chosen_register_id in self._register_map
+            else []
+        )
+        for temp_value in chosen_register:
+            if temp_value < 0:
+                continue
+            out.append(
+                StCommand(
+                    chosen_register_id,
+                    temp_value + OFFSET_TO_TEMP,
+                    REG_STATUS,
+                    "Saving register value on the fly",
+                ),
+            )
+        self._register_map[chosen_register_id] = []
+        return (chosen_register_id, out)
 
     def _get_parameter_count(self, name: str) -> int:
         fn = self._symbol_table.scope_lookup(name)
@@ -111,7 +144,8 @@ class CodeGenerator:
 
         # In theory, this section would be somehow extracted during the function
         # generation process, though that seems to be part of the "next steps".
-        main_location_imem = 21 + 2 * param_count
+        # TODO: Document that this is now 22 place because we're properly using the return register on the stack
+        main_location_imem = 22 + 2 * param_count
         # Explanation: Moving each param for main costs 2 lines (load into reg + store to new dmem slot)
 
         top_offset_from_top: int = param_count + REG_TOP
@@ -196,11 +230,11 @@ class CodeGenerator:
         self._topoffsets_to_complete.append(
             ("main", TMCommand.reserve_line_num()),
         )
-        # LdaCommand(REG_TOP, 6, REG_STATUS, "Set the new top pointer"),
 
         code.extend(
             [
                 LdcCommand(7, main_location_imem, "Jump to main"),
+                LdCommand(REG_RETURN_VALUE, 0, REG_TOP, "Loading main return value"),
                 # grab return value
                 OutCommand(REG_RETURN_VALUE, "Printing main return value"),
                 # halt
@@ -396,7 +430,9 @@ class CodeGenerator:
 
     def _generate_function(self, definition: Definition) -> list[TMLine]:
         main_param_count = self._get_parameter_count("main")
-        print_location_imem = 10 + 2 * main_param_count
+        print_location_imem = (
+            11 + 2 * main_param_count
+        )  # TODO: Document also changed (same as main location)
         code: list[TMLine] = []
         code.append(Comment(""))
         code.append(Comment(f"Function: {definition.name.value}"))
@@ -434,11 +470,31 @@ class CodeGenerator:
                 ),
             )
 
+            print_arg_place = print_expr.argument_list.arguments[0].value.place
+            result_reg = self._is_in_register(print_arg_place)
+            params: list[MemoryLocation] = []
+            if result_reg is None:
+                # If result is not a register, it'll be loaded from dmem
+                params.append(
+                    MemoryLocation(
+                        "dmem",
+                        print_arg_place + OFFSET_TO_TEMP,
+                    ),
+                )
+            else:
+                # If result is in a register, it can just be stored
+                params.append(
+                    MemoryLocation(
+                        "register",
+                        result_reg,
+                    ),
+                )
+
             code.extend(
                 self._generate_function_call(
                     "print",
                     print_location_imem,
-                    [MemoryLocation("register", REG_RETURN_VALUE)],
+                    params,
                 ),
             )
         self._reset_temps()
@@ -448,27 +504,41 @@ class CodeGenerator:
         temp_spots_required = max(temp_spots_required, self._tmp_count)
         self._topoffsets[definition.name.value] = temp_spots_required + 1
         # +1 is required here because we don't use offset 0
-        code.append(
-            LdCommand(
-                REG_RETURN_VALUE,
-                body.body.place + OFFSET_TO_TEMP,
-                REG_STATUS,
-                "Loading result of body into return addr",
-            ),
-        )
-        code.append(
-            StCommand(
-                REG_RETURN_VALUE,
-                -1 - len(definition.parameters.parameters),
-                REG_STATUS,
-            ),
-        )
+        body_place = body.body.place
+        # If body place is already in a register, use that. Otherwise load it
+        already_loaded_reg = self._is_in_register(body_place)
+        if already_loaded_reg is not None:
+            code.append(
+                StCommand(
+                    already_loaded_reg,
+                    -1 - len(definition.parameters.parameters),
+                    REG_STATUS,
+                    "Using already loaded register with return value",
+                ),
+            )
+        else:
+            code.extend(
+                [
+                    LdCommand(
+                        REG_RETURN_VALUE,
+                        body.body.place + OFFSET_TO_TEMP,
+                        REG_STATUS,
+                        "Loading result of body into return addr",
+                    ),
+                    StCommand(
+                        REG_RETURN_VALUE,
+                        -1 - len(definition.parameters.parameters),
+                        REG_STATUS,
+                    ),
+                ],
+            )
         code.extend(self._return_sequence_called_fn(param_count))
 
         return code
 
     def _reset_temps(self):
         self._tmp_count = 0
+        self._register_map = {}
 
     def _make_new_temp(self):
         self._tmp_count += 1
@@ -767,16 +837,16 @@ class CodeGenerator:
                     raise CodeGenerationError("Arg1 was None")
                 if not isinstance(line.result, int):
                     raise CodeGenerationError("Result was not an int")
+                # If already in a register, we don't need to do anything
+                if self._is_in_register(line.result) is not None:
+                    continue
+                # We need to load into a register, so get a register to do that
+                reg_1, save_lines = self._get_register()
+                out.extend(save_lines)
                 out.append(
-                    LdcCommand(REG_RETURN_VALUE, line.arg1, "Loading literal"),
+                    LdcCommand(reg_1, line.arg1, "Loading literal"),
                 )
-                out.append(
-                    StCommand(
-                        REG_RETURN_VALUE,
-                        line.result + OFFSET_TO_TEMP,
-                        REG_STATUS,
-                    ),
-                )
+                self._add_to_reg_map(reg_1, line.result)
             elif line.op in [
                 IROperation.PLUS,
                 IROperation.MINUS,
@@ -787,24 +857,37 @@ class CodeGenerator:
                     raise CodeGenerationError("Arg1 or 2 was not an int")
                 if not isinstance(line.result, int):
                     raise CodeGenerationError("Result was not an int")
-                reg_1 = self._get_register()
-                out.append(
-                    LdCommand(
-                        reg_1,
-                        line.arg1 + OFFSET_TO_TEMP,
-                        REG_STATUS,
-                        "Loading first temp value",
-                    ),
-                )
-                reg_2 = self._get_register()
-                out.append(
-                    LdCommand(
-                        reg_2,
-                        line.arg2 + OFFSET_TO_TEMP,
-                        REG_STATUS,
-                        "Loading second temp value",
-                    ),
-                )
+                result_potential = self._is_in_register(line.result)
+                if result_potential is not None:
+                    continue
+                reg_1 = self._is_in_register(line.arg1)
+                if reg_1 is None:
+                    reg_1, lines = self._get_register()
+                    out.extend(lines)
+                    out.append(
+                        LdCommand(
+                            reg_1,
+                            line.arg1 + OFFSET_TO_TEMP,
+                            REG_STATUS,
+                            "Loading first temp value",
+                        ),
+                    )
+                    self._add_to_reg_map(reg_1, line.arg1)
+
+                reg_2 = self._is_in_register(line.arg2)
+                if reg_2 is None:
+                    reg_2, lines = self._get_register()
+                    out.extend(lines)
+                    out.append(
+                        LdCommand(
+                            reg_2,
+                            line.arg2 + OFFSET_TO_TEMP,
+                            REG_STATUS,
+                            "Loading first temp value",
+                        ),
+                    )
+                    self._add_to_reg_map(reg_2, line.arg2)
+
                 command_builder = {
                     IROperation.PLUS: AddCommand,
                     IROperation.MINUS: SubCommand,
@@ -812,23 +895,17 @@ class CodeGenerator:
                     IROperation.DIVIDE: DivCommand,
                 }[line.op]
 
-                out_reg = self._get_register()
+                result_register, lines = self._get_register()
+                out.extend(lines)
                 out.append(
                     command_builder(
-                        out_reg,
+                        result_register,
                         reg_1,
                         reg_2,
                         "Adding the two value and put into return",
                     ),
                 )
-                out.append(
-                    StCommand(
-                        out_reg,
-                        line.result + OFFSET_TO_TEMP,
-                        REG_STATUS,
-                        "Putting the result into memory",
-                    ),
-                )
+                self._add_to_reg_map(result_register, line.result)
             elif line.op in [
                 IROperation.EQUALS,
                 IROperation.LESS_THAN,
@@ -839,35 +916,52 @@ class CodeGenerator:
                     )
                 if not isinstance(line.result, int):
                     raise CodeGenerationError("Result was not an int")
-                reg_1 = self._get_register()
-                reg_2 = self._get_register()
-                out_reg = self._get_register()
-                out.extend(
-                    [
+                reg_1 = self._is_in_register(line.arg1)
+                if reg_1 is None:
+                    reg_1, lines = self._get_register()
+                    out.extend(lines)
+                    out.append(
                         LdCommand(
                             reg_1,
                             line.arg1 + OFFSET_TO_TEMP,
                             REG_STATUS,
                             "Loading first temp value",
                         ),
+                    )
+                    self._add_to_reg_map(reg_1, line.arg1)
+
+                reg_2 = self._is_in_register(line.arg2)
+                if reg_2 is None:
+                    reg_2, lines = self._get_register()
+                    out.extend(lines)
+                    out.append(
                         LdCommand(
                             reg_2,
                             line.arg2 + OFFSET_TO_TEMP,
                             REG_STATUS,
                             "Loading second temp value",
                         ),
+                    )
+                    self._add_to_reg_map(reg_2, line.arg2)
+
+                out_reg, lines = self._get_register()
+                out.extend(lines)
+                out.extend(
+                    [
                         SubCommand(
-                            reg_1,
+                            out_reg,
                             reg_1,
                             reg_2,
                         ),
                     ],
                 )
+                # Technically it isn't set yet, but it will be after the if step
+                self._add_to_reg_map(out_reg, line.result)
 
                 if line.op == IROperation.EQUALS:
                     out.append(
                         JeqCommand(
-                            reg_1,
+                            out_reg,
                             2,
                             REG_PC,
                         ),
@@ -875,7 +969,7 @@ class CodeGenerator:
                 elif line.op == IROperation.LESS_THAN:
                     out.append(
                         JltCommand(
-                            reg_1,
+                            out_reg,
                             2,
                             REG_PC,
                         ),
@@ -903,15 +997,6 @@ class CodeGenerator:
                     ],
                 )
 
-                out.append(
-                    StCommand(
-                        out_reg,
-                        line.result + OFFSET_TO_TEMP,
-                        REG_STATUS,
-                        "Putting the result into memory",
-                    ),
-                )
-
             elif line.op in [
                 IROperation.NOT,
                 IROperation.UNARY_MINUS,
@@ -922,7 +1007,7 @@ class CodeGenerator:
                     )
                 if not isinstance(line.result, int):
                     raise CodeGenerationError("Result was not an int")
-                reg_1 = self._get_register()
+                reg_1, _ = self._get_register()
                 out.append(
                     LdCommand(
                         reg_1,
@@ -931,7 +1016,7 @@ class CodeGenerator:
                         "Loading first temp value",
                     ),
                 )
-                out_reg = self._get_register()
+                out_reg, _ = self._get_register()
                 negation_code = [
                     LdcCommand(
                         3,
@@ -994,29 +1079,23 @@ class CodeGenerator:
                     raise CodeGenerationError("Arg1 was None")
                 if not isinstance(line.result, int):
                     raise CodeGenerationError("Result was not an int")
-                reg_1 = self._get_register()
-                out.extend(
-                    [
+                reg_1 = self._is_in_register(line.arg1)
+                if reg_1 is None:
+                    reg_1, lines = self._get_register()
+                    out.extend(lines)
+                    out.append(
                         LdCommand(
                             reg_1,
                             line.arg1 + OFFSET_TO_TEMP,
                             REG_STATUS,
-                            "Copy (part 1)",
+                            "Loading the copy value into memory",
                         ),
-                        StCommand(
-                            reg_1,
-                            line.result + OFFSET_TO_TEMP,
-                            REG_STATUS,
-                            "Copy (part 2)",
-                        ),
-                        AddCommand(
-                            REG_RETURN_VALUE,
-                            0,
-                            reg_1,
-                            "Copying also into return reg",
-                        ),
-                    ],
-                )
+                    )
+                    self._add_to_reg_map(reg_1, line.arg1)
+
+                # Now, just point the result to that same register
+                self._add_to_reg_map(reg_1, line.result)
+
             elif line.op in [IROperation.LABEL]:
                 if not isinstance(line.result, str):
                     raise TypeError("Expected result to be of type string")
@@ -1024,7 +1103,7 @@ class CodeGenerator:
             elif line.op in [IROperation.IF_NOT, IROperation.IF]:
                 if not isinstance(line.arg1, int):
                     raise TypeError("Expected arg1 to be of type int")
-                reg = self._get_register()
+                reg, _ = self._get_register()
                 out.append(
                     LdCommand(
                         reg,
@@ -1043,12 +1122,23 @@ class CodeGenerator:
             elif line.op in [IROperation.PARAM]:
                 if not isinstance(line.result, int):
                     raise TypeError("Expected param to be an int")
-                self._current_params.append(
-                    MemoryLocation(
-                        "dmem",
-                        line.result + OFFSET_TO_TEMP,
-                    ),
-                )
+                result_reg = self._is_in_register(line.result)
+                if result_reg is None:
+                    # If result is not a register, it'll be loaded from dmem
+                    self._current_params.append(
+                        MemoryLocation(
+                            "dmem",
+                            line.result + OFFSET_TO_TEMP,
+                        ),
+                    )
+                else:
+                    # If result is in a register, it can just be stored
+                    self._current_params.append(
+                        MemoryLocation(
+                            "register",
+                            result_reg,
+                        ),
+                    )
             elif line.op in [IROperation.CALL]:
                 if not isinstance(line.result, int):
                     raise TypeError("Expected call result to be an int")
