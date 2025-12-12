@@ -159,8 +159,7 @@ Produced by the **Compile Squad**
 
 ### Code Generator:
 
-- Passing many arguments to the tm cli program could cause incorrect internal state when returning to the main function.
-- Currently only works for limited printing integer literals and returning a value from main
+- When calling kleinc for a that contains a period and relying on an implicit .kln extension, the file is sometimes misnamed and placed in the wrong location
 
 ## More Running Instructions
 

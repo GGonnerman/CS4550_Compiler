@@ -11,7 +11,7 @@ from compiler.tokens import Token, TokenType
 
 
 class Parser:
-    def __init__(self, scanner: Scanner, parse_table_filename: str = "parse-table.csv"):
+    def __init__(self, scanner: Scanner, parse_table_filename: str = "parse_table.csv"):
         self._scanner: Scanner = scanner
         self._parse_table: dict[
             tuple[NonTerminal, TokenType],

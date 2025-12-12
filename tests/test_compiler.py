@@ -5,7 +5,11 @@ from pathlib import Path
 import pytest
 
 base_path = Path(__file__).parent
+cache_path = base_path / "cache"
 tm_cli_path = base_path / "tm-cli-go"
+
+# Make sure our cache exists
+cache_path.mkdir(parents=True, exist_ok=True)
 
 
 @dataclass
@@ -21,14 +25,14 @@ def create_and_run_program(
     output: list[str],
 ):
     temp_filename = "temp"
-    with open(base_path / f"{temp_filename}.kln", "w+") as outfile:  # noqa: PTH123
+    with open(cache_path / f"{temp_filename}.kln", "w+") as outfile:  # noqa: PTH123
         _ = outfile.write(contents)
     obj = FileTestParams(
         temp_filename,
         arguments,
         output,
     )
-    run_file(obj, base_path)
+    run_file(obj, cache_path)
 
 
 def run_program(obj: FileTestParams):
@@ -45,6 +49,7 @@ def run_file(obj: FileTestParams, program_path: Path):
     # We never want to be testing 'stale' tm files if things fail to build
     generated_tm_file.unlink(missing_ok=True)
 
+    print(f"Runnign with path: {file_path}...")
     res = subprocess.run(  # noqa: S603
         [kleinc_path, file_path],
         check=False,

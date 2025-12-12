@@ -100,4 +100,4 @@ def generate_parse_table(filename: str):
 
 
 if __name__ == "__main__":
-    print(generate_parse_table("parse-table.csv"))
+    print(generate_parse_table("parse_table.csv"))

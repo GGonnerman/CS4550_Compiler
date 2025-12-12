@@ -1,9 +1,13 @@
 # Ignore tm files generated from programs
-programs/*.tm
+*.tm
 !programs/print-true.tm
 !programs/math.tm
+tests/cache
 
 # Ignore the tm compiler
+big-cli
+temp.data
+tm-cli-go
 out-cli
 
 # Ignore .bak files
