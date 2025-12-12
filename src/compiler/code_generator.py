@@ -384,14 +384,17 @@ class CodeGenerator:
         for reg_idx, reg_val in self._register_map.items():
             code.append(Comment(f"{reg_idx}: {', '.join(map(str, reg_val))}"))
 
-        for i, param in enumerate(params):
-            reg, commands = self.get_register(param, upcoming_ir[i:])
+        rev_params = list(reversed(params))
+        param_ir = [IR(param, None, IROperation.PARAM, None) for param in rev_params]
+        for i, param in enumerate(rev_params):
+            upcoming_with_params = [*param_ir[i:], *upcoming_ir]
+            reg, commands = self.get_register(param, upcoming_with_params)
             code.append(
                 Comment(f"Planning to copy value:{param} from {reg} into arg slot"),
             )
             code.extend(commands)
 
-            param_offset_in_dmem = len(params) - i
+            param_offset_in_dmem = i + 1
             code.append(
                 StCommand(
                     reg,
@@ -1144,14 +1147,13 @@ class CodeGenerator:
                     raise TypeError("Expected call arg 2 to be number of params")
 
                 params = self._current_params.copy()
-                upcoming_ir_with_params = ir[idx - len(params) :]
                 self._current_params.clear()
                 out.extend(
                     self._generate_function_call(
                         line.arg1,
                         None,
                         params,
-                        upcoming_ir_with_params,
+                        upcoming_ir,
                     ),
                 )
 
