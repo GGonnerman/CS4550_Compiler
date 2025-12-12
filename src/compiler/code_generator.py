@@ -548,14 +548,12 @@ class CodeGenerator:
 
             code.extend(argument_code)
 
-            code.extend(
-                self._generate_function_call(
-                    "print",
-                    print_location_imem,
-                    [print_expr.argument_list.arguments[0].value.place],
-                    [],
-                ),
+            reg, commands = self.get_register(
+                print_expr.argument_list.arguments[0].value.place,
+                [],
             )
+            code.extend(commands)
+            code.append(OutCommand(reg, "(Inline) Print value"))
         # Every time we reset temps, we also should clear the register map
         # TODO: Technically, here we could find a way to leave references to
         # negative values in the register map since those correspond to arguments
