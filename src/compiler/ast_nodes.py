@@ -73,10 +73,11 @@ class SemanticAction(StrEnum):
     MAKE_BOOLEAN_LITERAL = auto()
 
 
-class AnnotationType(ABC):
+class AnnotationType(ABC):  # noqa: B024
     @override
     def __eq__(self, value: object, /) -> bool:
-        # FIXME: Bug dependent on whether union eq is has override
+        # NOTE: Carefully inspect the interactions between this and union having
+        # an equality override before making modifications
         if isinstance(value, UnionAnnotation):
             return self in value
         return self.__class__ == value.__class__
@@ -112,7 +113,7 @@ class SequenceAnnotation(AnnotationType):
         return len(self.value)
 
     def __iter__(self):
-        for value in self.value:
+        for value in self.value:  # noqa: UP028
             yield value
 
     @override
@@ -182,7 +183,7 @@ class ASTNode(ABC):
     def __init__(self):
         self._hash: int = random.getrandbits(128)
         self._annotation: AnnotationType | None = None
-        # TODO: place and code should be moved down to only be a part of expression nodes
+
         self._place: int | None = None
         self._code: list[IR] | None = None
 
@@ -707,68 +708,68 @@ def convert_astnode_to_text(
     sub_indent: str = (indent + 1) * spacer
     if isinstance(node, Program):
         out.append(f"{main_indent}{node}")
-        convert_astnode_to_text(node.definition_list, indent + 1, spacer, out)
+        _ = convert_astnode_to_text(node.definition_list, indent + 1, spacer, out)
     elif isinstance(node, DefinitionList):
         for definition in node.definitions:
-            convert_astnode_to_text(definition, indent, spacer, out)
+            _ = convert_astnode_to_text(definition, indent, spacer, out)
     elif isinstance(node, Definition):
         out.append(f"{main_indent}{node}")
         out.append(f"{sub_indent}name {node.name.value}")
         out.append(f"{sub_indent}parameters")
-        convert_astnode_to_text(node.parameters, indent + 2, spacer, out)
+        _ = convert_astnode_to_text(node.parameters, indent + 2, spacer, out)
         out.append(f"{sub_indent}returns {node.return_type}")
         out.append(f"{sub_indent}body")
-        convert_astnode_to_text(node.body, indent + 2, spacer, out)
+        _ = convert_astnode_to_text(node.body, indent + 2, spacer, out)
     elif isinstance(node, ParameterList):
         for parameter in node.parameters:
-            convert_astnode_to_text(parameter, indent, spacer, out)
+            _ = convert_astnode_to_text(parameter, indent, spacer, out)
     elif isinstance(node, IdWithType):
         out.append(f"{main_indent}{node.type} {node.name.value}")
     elif isinstance(node, Body):
         for print_stm in node.print_expressions:
-            convert_astnode_to_text(print_stm, indent, spacer, out)
-        convert_astnode_to_text(node.body, indent, spacer, out)
+            _ = convert_astnode_to_text(print_stm, indent, spacer, out)
+        _ = convert_astnode_to_text(node.body, indent, spacer, out)
     elif isinstance(node, FunctionCallExpression):
         out.append(f"{main_indent}function call")
         out.append(f"{sub_indent}name {node.function_name.value}")
-        convert_astnode_to_text(node.argument_list, indent + 1, spacer, out)
+        _ = convert_astnode_to_text(node.argument_list, indent + 1, spacer, out)
     elif isinstance(node, ArgumentList):
         if len(node.arguments) == 0:
             return None
         out.append(f"{main_indent}arguments")
         for argument in node.arguments:
-            convert_astnode_to_text(argument, indent + 1, spacer, out)
+            _ = convert_astnode_to_text(argument, indent + 1, spacer, out)
     elif isinstance(node, Argument):
-        convert_astnode_to_text(node.value, indent, spacer, out)
+        _ = convert_astnode_to_text(node.value, indent, spacer, out)
     elif isinstance(node, BinaryExpression):
         out.append(f"{main_indent}{node}")
         if isinstance(node.left_side, (Identifier, Literal)):
             out.append(f"{sub_indent}left_side {node.left_side}")
         else:
             out.append(f"{sub_indent}left_side")
-            convert_astnode_to_text(node.left_side, indent + 2, spacer, out)
+            _ = convert_astnode_to_text(node.left_side, indent + 2, spacer, out)
         if isinstance(node.right_side, (Identifier, Literal)):
             out.append(f"{sub_indent}right_side {node.right_side}")
         else:
             out.append(f"{sub_indent}right_side")
-            convert_astnode_to_text(node.right_side, indent + 2, spacer, out)
+            _ = convert_astnode_to_text(node.right_side, indent + 2, spacer, out)
     elif isinstance(node, UnaryExpression):
         out.append(f"{main_indent}{node}")
         if isinstance(node.value, (Identifier, Literal)):
             out.append(f"{sub_indent}value {node.value}")
         else:
             out.append(f"{sub_indent}value")
-            convert_astnode_to_text(node.value, indent + 2, spacer, out)
+            _ = convert_astnode_to_text(node.value, indent + 2, spacer, out)
     elif isinstance(node, (Identifier, Literal)):
         out.append(f"{main_indent}{node}")
     elif isinstance(node, IfExpression):
         out.append(f"{main_indent}{node}")
         out.append(f"{sub_indent}condition")
-        convert_astnode_to_text(node.condition, indent + 2, spacer, out)
+        _ = convert_astnode_to_text(node.condition, indent + 2, spacer, out)
         out.append(f"{sub_indent}consequent")
-        convert_astnode_to_text(node.consequent, indent + 2, spacer, out)
+        _ = convert_astnode_to_text(node.consequent, indent + 2, spacer, out)
         out.append(f"{sub_indent}alternative")
-        convert_astnode_to_text(node.alternative, indent + 2, spacer, out)
+        _ = convert_astnode_to_text(node.alternative, indent + 2, spacer, out)
     else:
         raise NotImplementedError(f"Node of type {node} has not yet been implemented")
     return "\n".join(out)

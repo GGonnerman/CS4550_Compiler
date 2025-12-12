@@ -47,15 +47,13 @@ def clean_csv_file(csvfile: TextIOWrapper) -> list[list[str]]:
 
 
 def read_csv_to_table(filename: str) -> list[list[str]]:
-    file_dir = os.path.dirname(__file__)
-    parse_table_path = os.path.join(file_dir, filename)
+    file_dir = os.path.dirname(__file__)  # noqa: PTH120
+    parse_table_path = os.path.join(file_dir, filename)  # noqa: PTH118
     with open(parse_table_path) as csvfile:
         table: list[list[str]] = clean_csv_file(csvfile)
     return table
 
 
-# TODO: In theory here we could have allow creating custom "error values" which
-# would be parsed from cells within the original spreadsheet
 def parse_cell(cell: str) -> list[NonTerminal | TokenType | SemanticAction]:
     # None is episilon so there would be nothing returned in that case
     if cell == "None":

@@ -173,7 +173,7 @@ class SemanticAnalyzer:
             self.symbol_table.scope_enter()  # Enter body scope
             self._context = Context(
                 current_function,
-                set(parameter.name.value for parameter in node.parameters),
+                set(parameter.name.value for parameter in node.parameters),  # noqa: C401
                 set(),
             )
             self._annotate(node.body)
@@ -272,7 +272,7 @@ class SemanticAnalyzer:
                 if not isinstance(
                     passed_arguments,
                     SequenceAnnotation,
-                ) or not isinstance(expected_arguments, SequenceAnnotation):
+                ) or not isinstance(expected_arguments, SequenceAnnotation):  # pyright: ignore[reportUnnecessaryIsInstance]
                     self._add_error(
                         f"{self._printable_context}Wrong argument passed to {node.function_name.value}",
                     )
@@ -356,7 +356,6 @@ class SemanticAnalyzer:
         ):
             self._annotate(node.left_side)
             self._annotate(node.right_side)
-            # FIXME: This 99% has errors when mismatch between like unions or whatnot
             if (
                 node.left_side.annotation == ErrorAnnotation()
                 or node.right_side.annotation == ErrorAnnotation()
@@ -425,30 +424,10 @@ class SemanticAnalyzer:
                 f"Annotating nodes of type {node.__class__.__name__} has not been implemented yet",
             )
 
-    # def analyze(self) -> None:
-    #    self._program_resolve(self.ast)
-
-    # def _program_resolve(self, program: Program) -> None:
-    #    raise NotImplementedError
-
-    # def _definition_resolve(self, definition: Definition) -> None:
-    #    raise NotImplementedError
-
-    # def _parameter_list_resolve(self, parameter_list: ParameterList) -> None:
-    #    raise NotImplementedError
-
-    # def _expression_resolve(self, expression: Expression) -> None:
-    #    raise NotImplementedError
-
 
 if __name__ == "__main__":
     with open("programs/semantic-errors.kln") as infile:
         scanner = Scanner(infile.read())
-    # scanner = Scanner("""
-    # function main(): integer
-    #  print(true)
-    #  1
-    # """)
 
     parser = Parser(scanner)
 

@@ -59,6 +59,10 @@ ignore = [
     "TD001",
     "TD002",
     "TD003",
+    "PTH123",
+    "C901",
+    "PLR0912",
+    "PLR0915",
 ]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
@@ -69,7 +73,7 @@ unfixable = []
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [lint.per-file-ignores]
-"src/compiler/ast.py" = ["ARG002", "C901", "PLR0912", "PLR0915"]
+"src/compiler/ast.py" = ["ARG002"]
 
 [format]
 # Like Black, use double quotes for strings.

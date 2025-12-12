@@ -97,9 +97,8 @@ class CodeGenerator:
             result[reg] = new
         self._register_map = result
 
-    # TODO: Test this function
     # Returns: tuple representing register id to use and whether that vlaue is EVER used again
-    def get_furthest_register(self, upcoming_ir: list[IR]) -> tuple[Register, bool]:  # noqa: C901
+    def get_furthest_register(self, upcoming_ir: list[IR]) -> tuple[Register, bool]:
         # Determine distance to next use of value in each register
         distance_to_registers: dict[Register, int] = dict[Register, int]()
         for distance, ir in enumerate(upcoming_ir):
@@ -484,7 +483,6 @@ class CodeGenerator:
 
     def _generate_print_fn(self) -> list[TMLine]:
         param_count = self._get_parameter_count("print")
-        # TODO: Make sure clearing register_map at right places
         # Can hard code since nothing else happens in this function context
         selected_reg = Register(1)
         self._topoffsets["print"] = 0
@@ -520,8 +518,8 @@ class CodeGenerator:
         ]
 
     def _generate_function(self, definition: Definition) -> list[TMLine]:
-        main_param_count = self._get_parameter_count("main")
-        print_location_imem = 11 + 2 * main_param_count
+        # main_param_count = self._get_parameter_count("main")  # noqa: ERA001
+        # print_location_imem = 11 + 2 * main_param_count  # noqa: ERA001
         code: list[TMLine] = []
         code.append(Comment(""))
         code.append(Comment(f"Function: {definition.name.value}"))
@@ -554,12 +552,12 @@ class CodeGenerator:
             )
             code.extend(commands)
             code.append(OutCommand(reg, "(Inline) Print value"))
-        # Every time we reset temps, we also should clear the register map
-        # TODO: Technically, here we could find a way to leave references to
+        # TODO: Technically, here we could find a way to leave references to  # noqa: FIX002
         # negative values in the register map since those correspond to arguments
         # which span the enitre fn body, and only clear the *entire* map when
-        # leaving a function context...
+        # leaving a function context.
         self._reset_temps()
+        # Every time we reset temps, we also should clear the register map
         self._register_map.clear()
         ir = []
         self._generate_ir(body.body, ir)
@@ -581,12 +579,13 @@ class CodeGenerator:
                 chosen_reg,
                 -1 - len(definition.parameters.parameters),
                 REG_STATUS,
-                "Store result into return addr (Check this)",  # FIXME: Verify this
+                "Store result into return addr",
             ),
         )
         code.extend(self._return_sequence_called_fn(param_count))
         # Clear the register map since we're leaving the context of this method
-        # TODO: I don't think this is needed here since it should mirror temp lifetimes
+        # I don't think this is needed here since it should mirror temp lifetimes,
+        # however, it is an additional safeguard.
         self._register_map.clear()
 
         return code
@@ -600,7 +599,7 @@ class CodeGenerator:
 
     # Instead of generating expressions directly as code, we will generate 3AC (3 address code)
     # NOTE: This function *modifies* the argument ir's original list!
-    def _generate_ir(  # noqa: C901, PLR0915
+    def _generate_ir(
         self,
         expression: Expression,
         ir: list[IR],
@@ -877,7 +876,7 @@ class CodeGenerator:
                 f"Generating code for expression of type {expression.__class__.__name__} is not yet implemented",
             )
 
-    def _parse_ir(self, ir: list[IR]) -> list[TMLine]:  # noqa: C901, PLR0912, PLR0915
+    def _parse_ir(self, ir: list[IR]) -> list[TMLine]:
         out: list[TMLine] = []
         for line in ir:
             print(f"* {line}")
@@ -1098,8 +1097,6 @@ class CodeGenerator:
                     raise CodeGenerationError("Result was not an int")
                 reg_1, commands = self.get_register(line.arg1, upcoming_ir)
                 out.extend(commands)
-                # FIXME: This code is really bad, and indicates underlying issues!!
-                # FIXME: Very unsure abt this code working
                 out.append(
                     StCommand(
                         reg_1,

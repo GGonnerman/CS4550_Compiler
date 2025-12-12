@@ -8,6 +8,7 @@ tests/cache
 big-cli
 temp.data
 tm-cli-go
+tm_cli_go
 out-cli
 
 # Ignore .bak files

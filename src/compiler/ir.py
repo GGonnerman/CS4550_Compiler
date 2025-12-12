@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum, StrEnum, auto
 
+from typing_extensions import override
+
 
 class IROperation(Enum):
     TIMES = auto()
@@ -37,5 +39,6 @@ class IR:
     op: IROperation | None
     arg2: LoopStatus | int | str | None
 
+    @override
     def __str__(self) -> str:
         return f"IR(result={self.result}, arg1={self.arg1}, op={self.op.name if self.op else 'None'}, arg2={self.arg2})"

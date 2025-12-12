@@ -47,16 +47,14 @@ def success_case(program: str, expected_result: ASTNode, error_message: str):
 
 def error_case(
     program: str,
-    expected_message: str | None,
-    error_message: str,
+    _expected_message: str | None,
+    _error_message: str,
 ):
     s = Scanner(program)
     p = Parser(s)
-    with pytest.raises(ParseError) as excinfo:
+    with pytest.raises(ParseError) as _excinfo:
         _ = p.parse()
-    # TODO: In theory this should actually test it against a specific error message
-    # but for now just erroring is acceptable.
-    # assert str(excinfo.value) == expected_message, error_message
+    # assert str(excinfo.value) == expected_message, error_message  # noqa: ERA001
 
 
 def test_parse_empty_file():
@@ -586,8 +584,8 @@ def test_raises_invalid_print():
             1
             print()
         """,
-        expected_message=None,
-        error_message="Program should raise on print not being the first part of body",
+        _expected_message=None,
+        _error_message="Program should raise on print not being the first part of body",
     )
 
 

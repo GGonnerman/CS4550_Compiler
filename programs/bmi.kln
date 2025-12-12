@@ -1,4 +1,4 @@
-(* This program calculates BMI*)
+(* This program calculates BMI *)
 
 function BMI(height : integer, weight : integer): integer
     print(sqr_height(height) * weight)

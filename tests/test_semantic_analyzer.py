@@ -16,7 +16,7 @@ def assume_fails(program: str, expected_output: list[str], mock_stdout: StringIO
             Scanner(program),
         ).parse(),
     )
-    with pytest.raises(SemanticError) as excinfo:
+    with pytest.raises(SemanticError) as _excinfo:
         semantic_analyzer.annotate()
     semantic_analyzer.display_issues()
     assert mock_stdout.getvalue() == "\n".join(expected_output) + "\n"
@@ -41,7 +41,7 @@ class TestSemanticAnalyzer:
         semantic_analyzer.display_issues()
         assert (
             mock_stdout.getvalue()
-            == "\n".join(
+            == "\n".join(  # noqa: FLY002
                 [
                     "Klein Semantic Warning: Function unused_fun: Unused parameter unused_arg",
                     "Klein Semantic Warning: Unused function unused_fun",

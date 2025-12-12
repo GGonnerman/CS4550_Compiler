@@ -1,3 +1,5 @@
+(* Determines if an argument is a perfect square *)
+
 function perfect_square(n: integer): boolean
     if n < 0
         then false

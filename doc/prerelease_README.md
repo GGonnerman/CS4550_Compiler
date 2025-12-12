@@ -1,19 +1,19 @@
+## Note: This contains pre-release documentation, which is no longer accurate but could serve as a guide for those looking to contribute.
+
 # Klein to TM Compiler (WIP)
 
 Produced by the **Compile Squad**
 
 - Jett Nehls
-- Gaston Gonnerman
+- Gaston Gonnerman,
 - Will Gasaway
 - Matthew Costello
-
-This project contains the source code for a Klein to TM Compiler. The project is implemented in python. The project is largely split into 4 sections based on the generalized structure of a compiler: scanning, parsing, semantic analysis, optimization and code generation. This document serves as the primary documentation with supplementary material appearing in the doc directory, which is further broken down by section.
 
 ## Quickstart Guide
 
 ### Prerequisites
 
-- These instructions assume that you are running a UNIX enviornment with the following packages/program available and installed
+- These instructions assume that you are running a UNIX environment with the following packages/program available and installed
   - python3
     - Running `python3` **has** to execute python with version 3.11
     - If this is not the case, in `Makefile` line 2, python3 can be changed to a different alias (e.g., `python3.11` or `python`)
@@ -46,15 +46,12 @@ This project contains the source code for a Klein to TM Compiler. The project is
 
 #### Running kleins/kleinf/kleinv on a klein source code file
 
-- kleins will print all tokens within a source klein program
-- kleinf will validate a source klein program
-- kleinv will print the symbol table of a source klein program
 - The following instructions are applicable to any of the kleins/kleinf/kleinv programs. For simplicity, I will refer to that as the `kleins` file for this instruction set which can simply be substitued for your chosen bash file.
 - Ensure that the `kleins` file in the project root is executable
   - If not, running `chmod +x kleins` should make it
 - From the root, you can now run `./kleins path/to/source.kln`
 
-#### Running kleinp on a klein source code file to print text or dot of the ast
+#### Running kleinp on a klein source code file to print text or dot
 
 - Ensure that the `kleinp` file in the project root is executable
   - If not, running `chmod +x kleinp` should make it
@@ -68,15 +65,85 @@ This project contains the source code for a Klein to TM Compiler. The project is
 
 - More details about running the code as well as tests can be found in the [more running instructions](#more-running-instruction) section!
 
-## Optimization
+## Explanation of Files
 
-### Smart Register Selection
+#### Primary Source Code
 
-- Our compiler implemented a smart register selection which utilizes next use data to determine which register is the best to "replace." This helps to minimize the number of stores and loads that our compiler makes, thus increasing speed of compiled programs.
+- `src/compiler`: The home for all of the python source code
+  - `scanner.py`: Scans through the program and seperates each character of string of characters into tokens
+  - `position.py`: Custom position class to track the location in the program
+  - `token.py`: Custom token class with a number of TokenTypes
+  - `klein_errors.py`: Custom errors classes related to different stages of compiling
+  - `__init__.py`: These files are empty, but are required through to let python know that the current folder is a module.
+  - `__main__.py`: This file provides some scripts which are accessible to the user after installation
+  - `requirements.txt`: a list of all 3d party dependencies which get automatically installed when running make setup
+  - `parser.py`: Parses a program via a passed scanner and optionally the file name of the parse table to use
+  - `parse_table.py`: Parses a file into a usable parse table
+  - `parse-table.csv`: A parse table made by hand in [Google Sheets](https://docs.google.com/spreadsheets/d/1-ugst1Gmi6EBQGiQIIBZfSfw-93SWWUm1b03G6lsCB4/edit?usp=sharing). Each value corresponds to an enum (either TokenType or NonTerminal).
+  - `ast_nodes.py`: All ast nodes and utilities to display
+  - `symbol_table.py`: The symbol table and associated symbol code
+  - `semantic_analyzer.py`: Takes in a program and generates a symbol table and detects any semantic errors
+  - `tm.py`: A collection of classes to easily build lines of TM code or comments
+  - `code_generator.py`: Generates TM code from an AST and a symbol table
+  - `ir.py`: Classes used in the intermediate representation of the compiler
+- `src/compiler/programs`: The home for all user-facing program source code
+  - `token_lister.py`: Takes in a program and prints its token in an easily readable format
+  - `validator.py`: Takes in a program and prints whether it is a valid klein program or what issues arose when parsing
+  - `ast_lister.py`: Takes in a program and prints its ast as text
+  - `ast_lister_dot.py`: Takes in a program and prints its ast as a dot program
+  - `compile.py`: Takes in a program and prints its tm representation
 
-### Print Inlining
+#### Documentation Files
 
-- Our compiler implemented a basic of in-lining that specifically targets print statements. Due to their frequency and the cost of making function calls, this again helps to increase the speed of compiled programs. We _do_ still generate the source code for the print function in case it becomes necessary. However, it is unused at this time.
+- `doc/finite-state-machines/*.jff`; Finite state machine files (which can be opened in JFLAP)
+- `doc/klein-specification.txt`: Categorization of klein features with regular expressions and link to FSM files. Additionally contains a few notes on implementation
+- `doc/refactored-grammer.txt`: The klein grammar with specific refactoring to make generating first/follow sets easier. All changes are described with comments
+- `doc/first-and-follow-sets.md`: A listing of all first and follow sets displayed in seperate markdown tables
+- `doc/ast-nodes.txt`: A listing of all ast nodes created for the klein language
+- `doc/all-semantic-error-log.txt`: The output of running the semantic error checker against the semantic-error.kln program
+- `doc/code-generator-memory-explained.md`: An explanation of how memory is allocated, used, and addressing within/across stack frames
+- `doc/memory-diagrams/*`: A set of diagrams used within the code generation explanation page
+
+#### Project Files
+
+- `.gitignore`: ignores specific files/folders which should not be stored in version control
+- `LICENSE`: the project is tenatively licensed under the MIT license
+- `pyproject.toml`: Specific configuration to support building the project and exporting specific app scripts
+- `Makefile`: easily provides functionality to users related to installing and running the compiler
+- `kleins`: a bash script to allow scanning any klein program
+- `kleinf`: a bash script to allow validating any klein program
+- `kleinp`: a bash script to allow printing the ast of any klein program
+- `kleinv`: a bash script to print the symbol table or any semantic errors
+- `kleinc`: a bash script to allow compiling a klein program into tm code
+- `CS4550_Compiler.code-workspace` and `.vscode`: We all use vscode, so these files help our configurations to stay in sync.
+- `.ruff.toml`: configurations for ruff (python linter and formatter) to help standardize code
+
+#### Programs
+
+- `programs/`: a variety of programs (some functional and some intentionally non-functional) written in the klein language
+- `programs/EveryNode.kln`: Generates every node type (No module association)
+- `programs/MissingBody.kln`: Small Error: Has no definition body but has a print followed by a long comment (No module association)
+- `programs/BMI.kln`: Calculates BMI (Module 1)
+- `programs/CommaErr.kln`: Small Error: Has a trailing comma in parameter list (Module 2)
+- `programs/If_ThenErr.kln`: Small Error: If is missing then (Module 2)
+- `programs/PrintErr.kln`: Small Error: Missing return value in body (Module 2)
+- `programs/PrintErr2.kln`: Small Error: Print inside of an expression (Module 2)
+- `programs/TypeErr.kln`: Small Error: No type in formal parameter (Module 2)
+- `programs/FractionAdd.kln`: Adds 2 fractions and prints out result (Module 3)
+- `programs/semantic-errors.kln`: A program with every possible semantic error (Module 4)
+- `programs/fixed-semantic-errors.kln`: The above program with all semantic errors fixed (Module 4)
+- `programs/print-one.kln`: A simple program used for testing code generation (Module 5)
+- `programs/Perfect_Square.kln`: A program to determine if an input value is a perfect square (Module 6)
+
+#### Test Files
+
+- `tests/test_scanner.py`: contains a large number of tests to help validate and ensure functionality of the klein scanner
+- `tests/test_position.py`: contains a few tests for the position tracker
+- `tests/test_parser.py`: contains a number of tests for the parser
+- `tests/test_semantic_analyzer.py`: contains a number of tests for the semantic analyzer
+- `tests/test_compiler.py`: contains a number of tests for the full compiler
+- `tests/tm-cli-go`: a tm runner used in as part of the compiler testing
+- `tests/programs/`: contains professor provided klein programs (used in testing)
 
 ## Interested in Code Generation, TM, and Memory Management?
 
@@ -160,8 +227,6 @@ This project contains the source code for a Klein to TM Compiler. The project is
     - Now you can run the program validator against programs like `python src/compiler/programs/compile.py $'function main(): integer 1'` and see the generated tm code
 
 #### Running Tests
-
-Before running tests (specifically for the compiler), ensure that you have a version of tm-cli-go compiled for your machine (ideally with increase imem and dmem). This file should be placed inside of the tests directory and named `tm_cli_go` to ensure test functionality.
 
 ##### Running All Tests
 

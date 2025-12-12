@@ -11,7 +11,7 @@
 - Register 6 holds the top pointer (which points past the end of the current stack frame)
 - Register 7 is used to hold the program counter
 
-![Registers Diagram](./memory-diagrams/registers.png)
+![Registers Diagram](./memory_diagrams/registers.png)
 
 ### IMEM
 
@@ -26,7 +26,7 @@
 - IMEM then consists of the source code for print, which (1) stores the general purpose registers, (2) loads the argument into a register, (3) prints the register, (4) restores the general purpose registers, and (5) restores the top, status, and pc registers
 - Finally, the remained of IMEM is generated code for any function defined within the klein program
 
-![IMEM Diagram](./memory-diagrams/imem.png)
+![IMEM Diagram](./memory_diagrams/imem.png)
 
 ### Stack Frames
 
@@ -39,7 +39,7 @@
   - R7 is the program counter and it not saved (because it will be restored via the return address)
 - Finally, what left is space for any temporary data used within the function
 
-![Stack Frame Diagram](./memory-diagrams/stack-frame.png)
+![Stack Frame Diagram](./memory_diagrams/stack_frame.png)
 
 ### DMEM
 
@@ -47,13 +47,13 @@
 - Then, it has a traditional stack frame for the main function
 - Subsequently, each function call creates a new stack frame which is added to DMEM and upon its termination, that stack fram is deallocated.
 
-![DMEM Diagram](./memory-diagrams/dmem.png)
+![DMEM Diagram](./memory_diagrams/dmem.png)
 
 ### Real Example
 
 - The following is a the DMEM after running an example print-one program in klein with highlighting for each sections of the stack frames within DMEM
 
-![Real DMEM and Stack Frame Example](./memory-diagrams/dmem-stack-frame-example.png)
+![Real DMEM and Stack Frame Example](./memory_diagrams/dmem_stack_frame_example.png)
 
 ## Calculating Offsets
 

@@ -27,7 +27,6 @@ class KleinError(Exception):
                 continue
             break
 
-        # TODO: In some cases edge, this is off by one
         display_position += 1  # This account for 0 vs 1 indexing
         return "\n".join(
             [

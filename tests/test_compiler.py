@@ -6,7 +6,7 @@ import pytest
 
 base_path = Path(__file__).parent
 cache_path = base_path / "cache"
-tm_cli_path = base_path / "tm-cli-go"
+tm_cli_path = base_path / "tm_cli_go"
 
 # Make sure our cache exists
 cache_path.mkdir(parents=True, exist_ok=True)
@@ -25,7 +25,7 @@ def create_and_run_program(
     output: list[str],
 ):
     temp_filename = "temp"
-    with open(cache_path / f"{temp_filename}.kln", "w+") as outfile:  # noqa: PTH123
+    with open(cache_path / f"{temp_filename}.kln", "w+") as outfile:
         _ = outfile.write(contents)
     obj = FileTestParams(
         temp_filename,
@@ -556,7 +556,6 @@ def test_less_than():
 
 
 def test_mod():
-    # TODO: Add most test cases here
     create_and_run_program(
         """
     function main( m: integer, n : integer ) : integer

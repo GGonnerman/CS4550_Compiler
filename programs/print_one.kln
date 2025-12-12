@@ -1,3 +1,0 @@
-function main() : integer
-  print(123)
-  456

@@ -1,6 +1,0 @@
-function main() : boolean
-  print(true)
-  print(false)
-  print(123)
-  print(16482)
-  true
