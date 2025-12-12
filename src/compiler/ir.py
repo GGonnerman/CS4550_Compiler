@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from enum import Enum, auto
+from enum import Enum, StrEnum, auto
 
 
 class IROperation(Enum):
@@ -12,6 +12,7 @@ class IROperation(Enum):
     NOT = auto()
     UNARY_MINUS = auto()
     SET_LITERAL = auto()
+    STORE_LITERAL = auto()
     COPY = auto()
 
     PARAM = auto()
@@ -23,12 +24,18 @@ class IROperation(Enum):
     GOTO = auto()
 
 
+class LoopStatus(StrEnum):
+    ENTER = auto()
+    ELSE = auto()
+    EXIT = auto()
+
+
 @dataclass
 class IR:
     result: int | str
     arg1: int | str | None
     op: IROperation | None
-    arg2: int | str | None
+    arg2: LoopStatus | int | str | None
 
     def __str__(self) -> str:
         return f"IR(result={self.result}, arg1={self.arg1}, op={self.op.name if self.op else 'None'}, arg2={self.arg2})"

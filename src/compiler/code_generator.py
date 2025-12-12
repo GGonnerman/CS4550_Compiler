@@ -1,4 +1,5 @@
 from collections import defaultdict
+from copy import deepcopy
 from math import ceil
 
 from compiler.ast_nodes import (
@@ -23,7 +24,7 @@ from compiler.ast_nodes import (
     TimesExpression,
     UnaryMinusExpression,
 )
-from compiler.ir import IR, IROperation
+from compiler.ir import IR, IROperation, LoopStatus
 from compiler.klein_errors import CodeGenerationError
 from compiler.label import Label
 from compiler.symbol_table import SymbolTable
@@ -76,6 +77,25 @@ class CodeGenerator:
         self._current_fn_context: dict[str, int] = {}
 
         self._register_map: dict[Register, list[int]] = defaultdict(list)
+
+        self._loop_context: list[dict[Register, list[int]]] = []
+
+    def enter_context(self):
+        self._loop_context.append(deepcopy(self._register_map))
+
+    def leave_context(self):
+        prev = self._loop_context.pop()
+        curr = self._register_map
+        # We want to assume things in our curr set are there, but only negative
+        # (args) if they were there in the prev set too
+        result: dict[Register, list[int]] = defaultdict(list)
+        for reg in REG_GPS:
+            new: list[int] = []
+            for value in curr[reg]:
+                if value > 0 or (value < 0 and value in prev[reg]):
+                    new.append(value)  # noqa: PERF401
+            result[reg] = new
+        self._register_map = result
 
     # TODO: Test this function
     # Returns: tuple representing register id to use and whether that vlaue is EVER used again
@@ -153,7 +173,6 @@ class CodeGenerator:
         upcoming_ir: list[IR],
     ) -> tuple[Register, list[TMLine]]:
         commands: list[TMLine] = []
-        commands.append(Comment("Was forced to get a new register..."))
         # If theres an empty register, return that
         for reg_id in REG_GPS:
             reg_values = self._register_map[reg_id]
@@ -195,20 +214,6 @@ class CodeGenerator:
                     ),
                 )
         else:
-            # for reg_idx, reg_val in self._register_map.items():
-            commands.append(
-                Comment(
-                    f"{furthest_away_reg}: {', '.join(map(str, self._register_map[furthest_away_reg]))}",
-                ),
-            )
-
-            commands.extend(
-                Comment(
-                    f"IR Upcoming: {line}",
-                )
-                for line in upcoming_ir
-            )
-
             commands.append(
                 Comment(
                     f"Using furthest away reg {furthest_away_reg}, which is never touched again!",
@@ -377,9 +382,6 @@ class CodeGenerator:
         for i, param in enumerate(reversed(params)):
             # TODO: Technically, I should find a way to get upcoming IR here...
             reg, commands = self.get_register(param, [])
-            code.append(Comment("Register map for context:"))
-            for reg_idx, reg_val in self._register_map.items():
-                code.append(Comment(f"{reg_idx}: {', '.join(map(str, reg_val))}"))
             code.append(
                 Comment(f"Planning to copy value:{param} from {reg} into arg slot"),
             )
@@ -651,7 +653,7 @@ class CodeGenerator:
                     failed_cond_label,
                     expression.left_side.place,
                     IROperation.IF_NOT,
-                    None,
+                    LoopStatus.ENTER,
                 ),
             )
             self._generate_ir(expression.right_side, ir)
@@ -666,7 +668,7 @@ class CodeGenerator:
                     IR(
                         expression.place,
                         1,
-                        IROperation.SET_LITERAL,
+                        IROperation.STORE_LITERAL,
                         None,
                     ),
                     IR(
@@ -684,14 +686,14 @@ class CodeGenerator:
                     IR(
                         expression.place,
                         0,
-                        IROperation.SET_LITERAL,
+                        IROperation.STORE_LITERAL,
                         None,
                     ),
                     IR(
                         end_label,
                         None,
                         IROperation.LABEL,
-                        None,
+                        LoopStatus.EXIT,
                     ),
                 ],
             )
@@ -705,7 +707,7 @@ class CodeGenerator:
                     success_cond_label,
                     expression.left_side.place,
                     IROperation.IF,
-                    None,
+                    LoopStatus.ENTER,
                 ),
             )
             self._generate_ir(expression.right_side, ir)
@@ -720,7 +722,7 @@ class CodeGenerator:
                     IR(
                         expression.place,
                         0,
-                        IROperation.SET_LITERAL,
+                        IROperation.STORE_LITERAL,
                         None,
                     ),
                     IR(
@@ -733,19 +735,19 @@ class CodeGenerator:
                         success_cond_label,
                         None,
                         IROperation.LABEL,
-                        None,
+                        LoopStatus.ELSE,
                     ),
                     IR(
                         expression.place,
                         1,
-                        IROperation.SET_LITERAL,
+                        IROperation.STORE_LITERAL,
                         None,
                     ),
                     IR(
                         end_label,
                         None,
                         IROperation.LABEL,
-                        None,
+                        LoopStatus.EXIT,
                     ),
                 ],
             )
@@ -786,7 +788,7 @@ class CodeGenerator:
                     else_label,
                     expression.condition.place,
                     IROperation.IF_NOT,
-                    None,
+                    LoopStatus.ENTER,
                 ),
             )
 
@@ -810,7 +812,7 @@ class CodeGenerator:
                         else_label,
                         None,
                         IROperation.LABEL,
-                        None,
+                        LoopStatus.ELSE,
                     ),
                 ],
             )
@@ -829,7 +831,7 @@ class CodeGenerator:
                         done_label,
                         None,
                         IROperation.LABEL,
-                        None,
+                        LoopStatus.EXIT,
                     ),
                 ],
             )
@@ -889,6 +891,26 @@ class CodeGenerator:
                 out.append(
                     LdcCommand(register, line.arg1, "Loading literal"),
                 )
+            elif line.op == IROperation.STORE_LITERAL:
+                if not isinstance(line.arg1, int):
+                    raise CodeGenerationError("Arg1 was None")
+                if not isinstance(line.result, int):
+                    raise CodeGenerationError("Result was not an int")
+
+                # Temporary register
+                register, commands = self.get_new_register(None, upcoming_ir)
+                out.extend(commands)
+                out.extend(
+                    [
+                        LdcCommand(register, line.arg1, "Loading literal (to store)"),
+                        StCommand(
+                            register,
+                            line.result + OFFSET_TO_TEMP,
+                            REG_STATUS,
+                            "Storing literal",
+                        ),
+                    ],
+                )
             elif line.op in [
                 IROperation.PLUS,
                 IROperation.MINUS,
@@ -942,6 +964,7 @@ class CodeGenerator:
                             out_reg,
                             reg_1,
                             reg_2,
+                            "Calculating the difference as part of a comparison",
                         ),
                     ],
                 )
@@ -1069,11 +1092,23 @@ class CodeGenerator:
                 out.extend(commands)
                 # FIXME: This code is really bad, and indicates underlying issues!!
                 # FIXME: Very unsure abt this code working
-                self._register_map[reg_1].append(line.result)
+                out.append(
+                    StCommand(
+                        reg_1,
+                        line.result + OFFSET_TO_TEMP,
+                        REG_STATUS,
+                        "Copy via storing into new memory",
+                    ),
+                )
             elif line.op in [IROperation.LABEL]:
                 if not isinstance(line.result, str):
                     raise TypeError("Expected result to be of type string")
                 self._goto_mapping[line.result] = TMCommand.current_line_num
+                if line.arg2 == LoopStatus.ELSE:
+                    self.leave_context()
+                    self.enter_context()
+                elif line.arg2 == LoopStatus.EXIT:
+                    self.leave_context()
             elif line.op in [IROperation.IF_NOT, IROperation.IF]:
                 if not isinstance(line.arg1, int):
                     raise TypeError("Expected arg1 to be of type int")
@@ -1082,6 +1117,8 @@ class CodeGenerator:
                 self._jumps_to_complete.append(
                     (line, reg, TMCommand.reserve_line_num()),
                 )
+                if line.arg2 == LoopStatus.ENTER:
+                    self.enter_context()
             elif line.op in [IROperation.GOTO]:
                 self._jumps_to_complete.append(
                     (line, None, TMCommand.reserve_line_num()),
@@ -1099,10 +1136,6 @@ class CodeGenerator:
                 if not isinstance(line.arg2, int):
                     raise TypeError("Expected call arg 2 to be number of params")
 
-                out.append(Comment("Early grab register for fn return value"))
-                out_reg, commands = self.get_new_register(line.result, upcoming_ir)
-                out.extend(commands)
-
                 params = self._current_params.copy()
                 self._current_params.clear()
                 out.extend(
@@ -1112,6 +1145,10 @@ class CodeGenerator:
                         params,
                     ),
                 )
+
+                out_reg, commands = self.get_new_register(line.result, upcoming_ir)
+                out.extend(commands)
+
                 out.append(
                     LdCommand(
                         out_reg,
