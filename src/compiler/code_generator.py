@@ -1,5 +1,4 @@
 from collections import defaultdict
-from copy import deepcopy
 from math import ceil
 
 from compiler.ast_nodes import (
@@ -24,7 +23,7 @@ from compiler.ast_nodes import (
     TimesExpression,
     UnaryMinusExpression,
 )
-from compiler.ir import IR, IROperation, LoopTrack
+from compiler.ir import IR, IROperation
 from compiler.klein_errors import CodeGenerationError
 from compiler.label import Label
 from compiler.symbol_table import SymbolTable
@@ -77,48 +76,6 @@ class CodeGenerator:
         self._current_fn_context: dict[str, int] = {}
 
         self._register_map: dict[Register, list[int]] = defaultdict(list)
-
-        self._conditional_execution_contexts: list[dict[Register, list[int]]] = []
-
-    def enter_conditional_execution(self):
-        self._conditional_execution_contexts.append(deepcopy(self._register_map))
-
-    def leave_conditional_execution(self) -> list[TMLine]:
-        out: list[TMLine] = []
-        prev = self._conditional_execution_contexts.pop()
-        curr = self._register_map
-        # Now we have to resolve the delta between the "current" and "previous" states
-        new_reg_map: dict[Register, list[int]] = {}
-        for reg in REG_GPS:
-            if prev[reg] == curr[reg]:
-                new_reg_map[reg] = prev[reg]
-            else:
-                new_reg_map[reg] = []
-                delta = set(curr[reg]) - set(prev[reg])
-                union = set(curr[reg]) | set(prev[reg])
-                # print(
-                #    f"reg{[reg]}: previous {prev[reg]} and curr {curr[reg]} have a delta of {delta} and a union of {union}",
-                # )
-                for value in union:
-                    out.append(  # noqa: PERF401
-                        StCommand(
-                            reg,
-                            value + OFFSET_TO_TEMP,
-                            REG_STATUS,
-                            f"reg{[reg]}: previous {prev[reg]} and curr {curr[reg]} have a delta of {delta} and a union of {union}",
-                        ),
-                    )
-
-        out.append(
-            Comment("New reg map:"),
-        )
-        for k, v in new_reg_map.items():
-            out.append(
-                Comment(f"{k}: {v}"),
-            )
-
-        self._register_map = new_reg_map
-        return out
 
     # TODO: Test this function
     # Returns: tuple representing register id to use and whether that vlaue is EVER used again
@@ -694,7 +651,7 @@ class CodeGenerator:
                     failed_cond_label,
                     expression.left_side.place,
                     IROperation.IF_NOT,
-                    LoopTrack.ENTER,
+                    None,
                 ),
             )
             self._generate_ir(expression.right_side, ir)
@@ -734,7 +691,7 @@ class CodeGenerator:
                         end_label,
                         None,
                         IROperation.LABEL,
-                        LoopTrack.EXIT,
+                        None,
                     ),
                 ],
             )
@@ -748,7 +705,7 @@ class CodeGenerator:
                     success_cond_label,
                     expression.left_side.place,
                     IROperation.IF,
-                    LoopTrack.ENTER,
+                    None,
                 ),
             )
             self._generate_ir(expression.right_side, ir)
@@ -788,7 +745,7 @@ class CodeGenerator:
                         end_label,
                         None,
                         IROperation.LABEL,
-                        LoopTrack.EXIT,
+                        None,
                     ),
                 ],
             )
@@ -829,7 +786,7 @@ class CodeGenerator:
                     else_label,
                     expression.condition.place,
                     IROperation.IF_NOT,
-                    LoopTrack.ENTER,
+                    None,
                 ),
             )
 
@@ -853,7 +810,7 @@ class CodeGenerator:
                         else_label,
                         None,
                         IROperation.LABEL,
-                        LoopTrack.ELSE,
+                        None,
                     ),
                 ],
             )
@@ -872,7 +829,7 @@ class CodeGenerator:
                         done_label,
                         None,
                         IROperation.LABEL,
-                        LoopTrack.EXIT,
+                        None,
                     ),
                 ],
             )
@@ -1117,11 +1074,6 @@ class CodeGenerator:
                 if not isinstance(line.result, str):
                     raise TypeError("Expected result to be of type string")
                 self._goto_mapping[line.result] = TMCommand.current_line_num
-                if line.arg2 == LoopTrack.ELSE:
-                    out.extend(self.leave_conditional_execution())
-                    self.enter_conditional_execution()
-                elif line.arg2 == LoopTrack.EXIT:
-                    out.extend(self.leave_conditional_execution())
             elif line.op in [IROperation.IF_NOT, IROperation.IF]:
                 if not isinstance(line.arg1, int):
                     raise TypeError("Expected arg1 to be of type int")
@@ -1130,8 +1082,6 @@ class CodeGenerator:
                 self._jumps_to_complete.append(
                     (line, reg, TMCommand.reserve_line_num()),
                 )
-                if line.arg2 == LoopTrack.ENTER:
-                    self.enter_conditional_execution()
             elif line.op in [IROperation.GOTO]:
                 self._jumps_to_complete.append(
                     (line, None, TMCommand.reserve_line_num()),

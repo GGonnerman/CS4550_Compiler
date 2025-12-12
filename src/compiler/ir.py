@@ -23,18 +23,12 @@ class IROperation(Enum):
     GOTO = auto()
 
 
-class LoopTrack(Enum):
-    ENTER = auto()
-    ELSE = auto()
-    EXIT = auto()
-
-
 @dataclass
 class IR:
     result: int | str
     arg1: int | str | None
     op: IROperation | None
-    arg2: LoopTrack | int | str | None
+    arg2: int | str | None
 
     def __str__(self) -> str:
         return f"IR(result={self.result}, arg1={self.arg1}, op={self.op.name if self.op else 'None'}, arg2={self.arg2})"
