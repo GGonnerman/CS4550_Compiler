@@ -195,22 +195,23 @@ class CodeGenerator:
         # and use that
         furthest_away_reg, need_stored = self.get_furthest_register(upcoming_ir)
         if need_stored:
+            commands.append(
+                Comment(
+                    f"Using furthest away reg {furthest_away_reg}, which needs saved for {', '.join(map(str, self._register_map[furthest_away_reg]))}",
+                ),
+            )
             for temp_position in self._register_map[furthest_away_reg]:
                 # We don't store into parms (negative offsets)
+
                 if temp_position < 0:
                     continue
 
-                commands.append(
-                    Comment(
-                        f"Using furthest away reg {furthest_away_reg}, which needs saved...",
-                    ),
-                )
                 commands.append(
                     StCommand(
                         furthest_away_reg,
                         temp_position + OFFSET_TO_TEMP,
                         REG_STATUS,
-                        "Storing the most-unused reg into memory",
+                        f"Storing the most-unused reg into memory at {temp_position}",
                     ),
                 )
         else:
@@ -355,6 +356,7 @@ class CodeGenerator:
         function_name: str,
         destination_addr: int | None,
         params: list[int],
+        upcoming_ir: list[IR],
     ) -> list[TMLine]:
         param_count = self._get_parameter_count(function_name)
         status_offset_from_top = param_count + 5
@@ -379,15 +381,17 @@ class CodeGenerator:
             ],
         )
 
-        for i, param in enumerate(reversed(params)):
-            # TODO: Technically, I should find a way to get upcoming IR here...
-            reg, commands = self.get_register(param, [])
+        for reg_idx, reg_val in self._register_map.items():
+            code.append(Comment(f"{reg_idx}: {', '.join(map(str, reg_val))}"))
+
+        for i, param in enumerate(params):
+            reg, commands = self.get_register(param, upcoming_ir[i:])
             code.append(
                 Comment(f"Planning to copy value:{param} from {reg} into arg slot"),
             )
             code.extend(commands)
 
-            param_offset_in_dmem = i + 1
+            param_offset_in_dmem = len(params) - i
             code.append(
                 StCommand(
                     reg,
@@ -498,6 +502,7 @@ class CodeGenerator:
         function_name: str,
         destination_addr: int | None,
         params: list[int],
+        upcoming_ir: list[IR],
     ) -> list[TMLine]:
         return [
             Comment(f"Calling {function_name}"),
@@ -505,6 +510,7 @@ class CodeGenerator:
                 function_name,
                 destination_addr,
                 params,
+                upcoming_ir,
             ),
             *self._return_sequence_calling_fn(),
             Comment(f"Returning from {function_name}"),
@@ -544,6 +550,7 @@ class CodeGenerator:
                     "print",
                     print_location_imem,
                     [print_expr.argument_list.arguments[0].value.place],
+                    [],
                 ),
             )
         # Every time we reset temps, we also should clear the register map
@@ -1137,12 +1144,14 @@ class CodeGenerator:
                     raise TypeError("Expected call arg 2 to be number of params")
 
                 params = self._current_params.copy()
+                upcoming_ir_with_params = ir[idx - len(params) :]
                 self._current_params.clear()
                 out.extend(
                     self._generate_function_call(
                         line.arg1,
                         None,
                         params,
+                        upcoming_ir_with_params,
                     ),
                 )
 
