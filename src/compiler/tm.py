@@ -1,10 +1,16 @@
 from abc import ABC, abstractmethod
 from typing import ClassVar
 
+from typing_extensions import override
+
+
+class Register(int):
+    pass
+
 
 class TMLine(ABC):
     @abstractmethod
-    def print(self):
+    def print(self) -> None:
         raise NotImplementedError("Printing must be implemented by subclass")
 
 
@@ -12,6 +18,7 @@ class Comment(TMLine):
     def __init__(self, comment: str):
         self._comment: str = comment
 
+    @override
     def print(self):
         if len(self._comment) == 0:
             print("*")
@@ -55,6 +62,7 @@ class TMCommand(TMLine):
         TMCommand.current_line_num += 1
         return TMCommand.current_line_num - 1
 
+    @override
     def print(
         self,
     ):
@@ -77,9 +85,9 @@ class ROCommand(TMCommand):
     def __init__(  # noqa: PLR0913
         self,
         command: str,
-        r1: int,
-        r2: int,
-        r3: int,
+        r1: Register,
+        r2: Register,
+        r3: Register,
         comment: str | None = None,
         line_num: int | None = None,
     ):
@@ -94,29 +102,43 @@ class ROCommand(TMCommand):
 class InCommand(ROCommand):
     def __init__(
         self,
-        write_to_register: int,
+        write_to_register: Register,
         comment: str | None = None,
         line_num: int | None = None,
     ):
-        super().__init__("IN", write_to_register, 0, 0, comment, line_num)
+        super().__init__(
+            "IN",
+            write_to_register,
+            Register(0),
+            Register(0),
+            comment,
+            line_num,
+        )
 
 
 class OutCommand(ROCommand):
     def __init__(
         self,
-        read_from_register: int,
+        read_from_register: Register,
         comment: str | None = None,
         line_num: int | None = None,
     ):
-        super().__init__("OUT", read_from_register, 0, 0, comment, line_num)
+        super().__init__(
+            "OUT",
+            read_from_register,
+            Register(0),
+            Register(0),
+            comment,
+            line_num,
+        )
 
 
 class AddCommand(ROCommand):
     def __init__(
         self,
-        destination_register: int,
-        left_side_register: int,
-        right_side_register: int,
+        destination_register: Register,
+        left_side_register: Register,
+        right_side_register: Register,
         comment: str | None = None,
         line_num: int | None = None,
     ):
@@ -133,9 +155,9 @@ class AddCommand(ROCommand):
 class SubCommand(ROCommand):
     def __init__(
         self,
-        destination_register: int,
-        left_side_register: int,
-        right_side_register: int,
+        destination_register: Register,
+        left_side_register: Register,
+        right_side_register: Register,
         comment: str | None = None,
         line_num: int | None = None,
     ):
@@ -152,9 +174,9 @@ class SubCommand(ROCommand):
 class MulCommand(ROCommand):
     def __init__(
         self,
-        destination_register: int,
-        left_side_register: int,
-        right_side_register: int,
+        destination_register: Register,
+        left_side_register: Register,
+        right_side_register: Register,
         comment: str | None = None,
         line_num: int | None = None,
     ):
@@ -171,9 +193,9 @@ class MulCommand(ROCommand):
 class DivCommand(ROCommand):
     def __init__(
         self,
-        destination_register: int,
-        left_side_register: int,
-        right_side_register: int,
+        destination_register: Register,
+        left_side_register: Register,
+        right_side_register: Register,
         comment: str | None = None,
         line_num: int | None = None,
     ):
@@ -189,16 +211,23 @@ class DivCommand(ROCommand):
 
 class HaltCommand(ROCommand):
     def __init__(self, comment: str | None = None, line_num: int | None = None):
-        super().__init__("HALT", 0, 0, 0, comment, line_num)
+        super().__init__(
+            "HALT",
+            Register(0),
+            Register(0),
+            Register(0),
+            comment,
+            line_num,
+        )
 
 
 class RMCommand(TMCommand):
     def __init__(  # noqa: PLR0913
         self,
         command: str,
-        r1: int,
+        r1: Register,
         offset: int,
-        r2: int,
+        r2: Register,
         comment: str | None = None,
         line_num: int | None = None,
     ):
@@ -213,7 +242,7 @@ class RMCommand(TMCommand):
 class LdcCommand(RMCommand):
     def __init__(
         self,
-        load_into: int,
+        load_into: Register,
         constant_value: int,
         comment: str | None = None,
         line_num: int | None = None,
@@ -222,7 +251,7 @@ class LdcCommand(RMCommand):
             "LDC",
             load_into,
             constant_value,
-            0,
+            Register(0),
             comment,
             line_num,
         )
@@ -231,9 +260,9 @@ class LdcCommand(RMCommand):
 class LdaCommand(RMCommand):
     def __init__(
         self,
-        load_into: int,
+        load_into: Register,
         offset: int,
-        address: int,
+        address: Register,
         comment: str | None = None,
         line_num: int | None = None,
     ):
@@ -250,9 +279,9 @@ class LdaCommand(RMCommand):
 class LdCommand(RMCommand):
     def __init__(
         self,
-        load_into: int,
+        load_into: Register,
         offset: int,
-        address: int,
+        address: Register,
         comment: str | None = None,
         line_num: int | None = None,
     ):
@@ -269,9 +298,9 @@ class LdCommand(RMCommand):
 class StCommand(RMCommand):
     def __init__(
         self,
-        load_from: int,
+        load_from: Register,
         offset: int,
-        into_address: int,
+        into_address: Register,
         comment: str | None = None,
         line_num: int | None = None,
     ):
@@ -288,9 +317,9 @@ class StCommand(RMCommand):
 class JeqCommand(RMCommand):
     def __init__(
         self,
-        test: int,
+        test: Register,
         offset: int,
-        goto_address: int,
+        goto_address: Register,
         comment: str | None = None,
         line_num: int | None = None,
     ):
@@ -307,9 +336,9 @@ class JeqCommand(RMCommand):
 class JneCommand(RMCommand):
     def __init__(
         self,
-        test: int,
+        test: Register,
         offset: int,
-        goto_address: int,
+        goto_address: Register,
         comment: str | None = None,
         line_num: int | None = None,
     ):
@@ -326,9 +355,9 @@ class JneCommand(RMCommand):
 class JltCommand(RMCommand):
     def __init__(
         self,
-        test: int,
+        test: Register,
         offset: int,
-        goto_address: int,
+        goto_address: Register,
         comment: str | None = None,
         line_num: int | None = None,
     ):
@@ -345,9 +374,9 @@ class JltCommand(RMCommand):
 class JleCommand(RMCommand):
     def __init__(
         self,
-        test: int,
+        test: Register,
         offset: int,
-        goto_address: int,
+        goto_address: Register,
         comment: str | None = None,
         line_num: int | None = None,
     ):
@@ -364,9 +393,9 @@ class JleCommand(RMCommand):
 class JgtCommand(RMCommand):
     def __init__(
         self,
-        test: int,
+        test: Register,
         offset: int,
-        goto_address: int,
+        goto_address: Register,
         comment: str | None = None,
         line_num: int | None = None,
     ):
@@ -383,9 +412,9 @@ class JgtCommand(RMCommand):
 class JgeCommand(RMCommand):
     def __init__(
         self,
-        test: int,
+        test: Register,
         offset: int,
-        goto_address: int,
+        goto_address: Register,
         comment: str | None = None,
         line_num: int | None = None,
     ):

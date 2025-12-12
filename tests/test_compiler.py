@@ -492,20 +492,26 @@ def test_recursive():
     )
 
 
+@dataclass(frozen=True)
+class Option:
+    arguments: list[str]
+    output: list[str]
+
+
 def test_equality():
     options = [
-        {
-            "arguments": ["10", "9"],
-            "output": "0",
-        },
-        {
-            "arguments": ["10", "10"],
-            "output": "1",
-        },
-        {
-            "arguments": ["10", "11"],
-            "output": "0",
-        },
+        Option(
+            ["10", "9"],
+            ["0"],
+        ),
+        Option(
+            ["10", "10"],
+            ["1"],
+        ),
+        Option(
+            ["10", "11"],
+            ["0"],
+        ),
     ]
     for option in options:
         create_and_run_program(
@@ -513,25 +519,25 @@ def test_equality():
         function main(a: integer, b: integer): boolean
             a = b
         """,
-            option["arguments"],
-            option["output"],
+            option.arguments,
+            option.output,
         )
 
 
 def test_less_than():
     options = [
-        {
-            "arguments": ["10", "9"],
-            "output": "0",
-        },
-        {
-            "arguments": ["10", "10"],
-            "output": "0",
-        },
-        {
-            "arguments": ["10", "11"],
-            "output": "1",
-        },
+        Option(
+            ["10", "9"],
+            ["0"],
+        ),
+        Option(
+            ["10", "10"],
+            ["0"],
+        ),
+        Option(
+            ["10", "11"],
+            ["1"],
+        ),
     ]
     for option in options:
         create_and_run_program(
@@ -539,8 +545,8 @@ def test_less_than():
         function main(a: integer, b: integer): boolean
             a < b
         """,
-            option["arguments"],
-            option["output"],
+            option.arguments,
+            option.output,
         )
 
 

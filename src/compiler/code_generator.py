@@ -1,4 +1,5 @@
 from collections import defaultdict
+from copy import deepcopy
 from math import ceil
 
 from compiler.ast_nodes import (
@@ -23,7 +24,7 @@ from compiler.ast_nodes import (
     TimesExpression,
     UnaryMinusExpression,
 )
-from compiler.ir import IR, IROperation
+from compiler.ir import IR, IROperation, LoopTrack
 from compiler.klein_errors import CodeGenerationError
 from compiler.label import Label
 from compiler.symbol_table import SymbolTable
@@ -40,18 +41,19 @@ from compiler.tm import (
     LdCommand,
     MulCommand,
     OutCommand,
+    Register,
     StCommand,
     SubCommand,
     TMCommand,
     TMLine,
 )
 
-REG_ZERO = 0
-REG_GPS = [1, 2, 3]
-# REG_RETURN_VALUE = 4
-REG_STATUS = 5
-REG_TOP = 6
-REG_PC = 7
+REG_ZERO = Register(0)
+REG_GPS = [Register(1), Register(2), Register(3)]
+# REG_RETURN_VALUE = 4  # noqa: ERA001
+REG_STATUS = Register(5)
+REG_TOP = Register(6)
+REG_PC = Register(7)
 
 OFFSET_TO_TEMP = 7
 
@@ -66,7 +68,7 @@ class CodeGenerator:
         self._label_maker: Label = Label()
         self._goto_mapping: dict[str, int] = {}
         # Original IR line, optional conditional register, source position
-        self._jumps_to_complete: list[tuple[IR, int | None, int]] = []
+        self._jumps_to_complete: list[tuple[IR, Register | None, int]] = []
         self._current_params: list[int] = []
 
         self._topoffsets_to_complete: list[tuple[str, int]] = []
@@ -74,13 +76,55 @@ class CodeGenerator:
 
         self._current_fn_context: dict[str, int] = {}
 
-        self._register_map: dict[int, list[int]] = defaultdict(list)
+        self._register_map: dict[Register, list[int]] = defaultdict(list)
+
+        self._conditional_execution_contexts: list[dict[Register, list[int]]] = []
+
+    def enter_conditional_execution(self):
+        self._conditional_execution_contexts.append(deepcopy(self._register_map))
+
+    def leave_conditional_execution(self) -> list[TMLine]:
+        out: list[TMLine] = []
+        prev = self._conditional_execution_contexts.pop()
+        curr = self._register_map
+        # Now we have to resolve the delta between the "current" and "previous" states
+        new_reg_map: dict[Register, list[int]] = {}
+        for reg in REG_GPS:
+            if prev[reg] == curr[reg]:
+                new_reg_map[reg] = prev[reg]
+            else:
+                new_reg_map[reg] = []
+                delta = set(curr[reg]) - set(prev[reg])
+                union = set(curr[reg]) | set(prev[reg])
+                # print(
+                #    f"reg{[reg]}: previous {prev[reg]} and curr {curr[reg]} have a delta of {delta} and a union of {union}",
+                # )
+                for value in union:
+                    out.append(  # noqa: PERF401
+                        StCommand(
+                            reg,
+                            value + OFFSET_TO_TEMP,
+                            REG_STATUS,
+                            f"reg{[reg]}: previous {prev[reg]} and curr {curr[reg]} have a delta of {delta} and a union of {union}",
+                        ),
+                    )
+
+        out.append(
+            Comment("New reg map:"),
+        )
+        for k, v in new_reg_map.items():
+            out.append(
+                Comment(f"{k}: {v}"),
+            )
+
+        self._register_map = new_reg_map
+        return out
 
     # TODO: Test this function
     # Returns: tuple representing register id to use and whether that vlaue is EVER used again
-    def get_furthest_register(self, upcoming_ir: list[IR]) -> tuple[int, bool]:
+    def get_furthest_register(self, upcoming_ir: list[IR]) -> tuple[Register, bool]:  # noqa: C901
         # Determine distance to next use of value in each register
-        distance_to_registers: dict[int, int] = dict[int, int]()
+        distance_to_registers: dict[Register, int] = dict[Register, int]()
         for distance, ir in enumerate(upcoming_ir):
             for reg_id, reg_values in self._register_map.items():
                 if (
@@ -121,7 +165,7 @@ class CodeGenerator:
         self,
         value: int,
         upcoming_ir: list[IR],
-    ) -> tuple[int, list[TMLine]]:
+    ) -> tuple[Register, list[TMLine]]:
         commands: list[TMLine] = []
         # If already in a register, return that
         for reg_id, reg_values in self._register_map.items():
@@ -150,7 +194,7 @@ class CodeGenerator:
         self,
         value: int | None,
         upcoming_ir: list[IR],
-    ) -> tuple[int, list[TMLine]]:
+    ) -> tuple[Register, list[TMLine]]:
         commands: list[TMLine] = []
         commands.append(Comment("Was forced to get a new register..."))
         # If theres an empty register, return that
@@ -200,12 +244,13 @@ class CodeGenerator:
                     f"{furthest_away_reg}: {', '.join(map(str, self._register_map[furthest_away_reg]))}",
                 ),
             )
-            for line in upcoming_ir:
-                commands.append(
-                    Comment(
-                        f"IR Upcoming: {line}",
-                    ),
+
+            commands.extend(
+                Comment(
+                    f"IR Upcoming: {line}",
                 )
+                for line in upcoming_ir
+            )
 
             commands.append(
                 Comment(
@@ -253,7 +298,7 @@ class CodeGenerator:
         # Move all arguments down 1 slot in DMEM
         # and reverse the order (so actually move it down via #params - 1)
         if param_count >= 1:
-            selected_reg = 1
+            selected_reg = Register(1)
             code.extend(
                 [
                     LdCommand(
@@ -272,8 +317,8 @@ class CodeGenerator:
             )
 
         for i in range(1, ceil(param_count / 2)):
-            swap_reg_1 = 1
-            swap_reg_2 = 2
+            swap_reg_1 = Register(1)
+            swap_reg_2 = Register(2)
             # Get the position of the 2 element we're going to swap
             lower_pos = i
             upper_pos = param_count - i
@@ -327,15 +372,17 @@ class CodeGenerator:
             ("main", TMCommand.reserve_line_num()),
         )
 
+        out_register = Register(1)
         code.extend(
             [
-                LdcCommand(7, main_location_imem, "Jump to main"),
+                LdcCommand(REG_PC, main_location_imem, "Jump to main"),
                 LdCommand(
-                    1,
+                    out_register,
                     0,
                     REG_TOP,
+                    "Save the return value from main into a register for printing",
                 ),  # Copy return value into main and then print it
-                OutCommand(1, "Printing main return value"),
+                OutCommand(out_register, "Printing main return value"),
                 HaltCommand(),
             ],
         )
@@ -417,7 +464,7 @@ class CodeGenerator:
 
         if isinstance(destination_addr, int):
             code.append(
-                LdcCommand(7, destination_addr),
+                LdcCommand(REG_PC, destination_addr),
             )
         else:
             self._jumps_to_complete.append(
@@ -473,7 +520,7 @@ class CodeGenerator:
         param_count = self._get_parameter_count("print")
         # TODO: Make sure clearing register_map at right places
         # Can hard code since nothing else happens in this function context
-        selected_reg = 1
+        selected_reg = Register(1)
         self._topoffsets["print"] = 0
         commands: list[TMLine] = [
             Comment(""),
@@ -647,7 +694,7 @@ class CodeGenerator:
                     failed_cond_label,
                     expression.left_side.place,
                     IROperation.IF_NOT,
-                    None,
+                    LoopTrack.ENTER,
                 ),
             )
             self._generate_ir(expression.right_side, ir)
@@ -687,7 +734,7 @@ class CodeGenerator:
                         end_label,
                         None,
                         IROperation.LABEL,
-                        None,
+                        LoopTrack.EXIT,
                     ),
                 ],
             )
@@ -701,7 +748,7 @@ class CodeGenerator:
                     success_cond_label,
                     expression.left_side.place,
                     IROperation.IF,
-                    None,
+                    LoopTrack.ENTER,
                 ),
             )
             self._generate_ir(expression.right_side, ir)
@@ -741,7 +788,7 @@ class CodeGenerator:
                         end_label,
                         None,
                         IROperation.LABEL,
-                        None,
+                        LoopTrack.EXIT,
                     ),
                 ],
             )
@@ -782,7 +829,7 @@ class CodeGenerator:
                     else_label,
                     expression.condition.place,
                     IROperation.IF_NOT,
-                    None,
+                    LoopTrack.ENTER,
                 ),
             )
 
@@ -806,7 +853,7 @@ class CodeGenerator:
                         else_label,
                         None,
                         IROperation.LABEL,
-                        None,
+                        LoopTrack.ELSE,
                     ),
                 ],
             )
@@ -825,7 +872,7 @@ class CodeGenerator:
                         done_label,
                         None,
                         IROperation.LABEL,
-                        None,
+                        LoopTrack.EXIT,
                     ),
                 ],
             )
@@ -1039,7 +1086,7 @@ class CodeGenerator:
                             AddCommand(
                                 out_reg,
                                 reg_1,
-                                0,
+                                REG_ZERO,
                             ),
                         ],
                     )
@@ -1064,15 +1111,17 @@ class CodeGenerator:
                 reg_1, commands = self.get_register(line.arg1, upcoming_ir)
                 out.extend(commands)
                 # FIXME: This code is really bad, and indicates underlying issues!!
-                for reg in self._register_map.values():
-                    if line.result in reg:
-                        reg.remove(line.result)
                 # FIXME: Very unsure abt this code working
                 self._register_map[reg_1].append(line.result)
             elif line.op in [IROperation.LABEL]:
                 if not isinstance(line.result, str):
                     raise TypeError("Expected result to be of type string")
                 self._goto_mapping[line.result] = TMCommand.current_line_num
+                if line.arg2 == LoopTrack.ELSE:
+                    out.extend(self.leave_conditional_execution())
+                    self.enter_conditional_execution()
+                elif line.arg2 == LoopTrack.EXIT:
+                    out.extend(self.leave_conditional_execution())
             elif line.op in [IROperation.IF_NOT, IROperation.IF]:
                 if not isinstance(line.arg1, int):
                     raise TypeError("Expected arg1 to be of type int")
@@ -1081,6 +1130,8 @@ class CodeGenerator:
                 self._jumps_to_complete.append(
                     (line, reg, TMCommand.reserve_line_num()),
                 )
+                if line.arg2 == LoopTrack.ENTER:
+                    self.enter_conditional_execution()
             elif line.op in [IROperation.GOTO]:
                 self._jumps_to_complete.append(
                     (line, None, TMCommand.reserve_line_num()),
@@ -1144,13 +1195,13 @@ class CodeGenerator:
                     LdaCommand(
                         REG_PC,
                         destination_line,
-                        0,
+                        REG_ZERO,
                         "Unconditional jump",
                         source_line,
                     ),
                 )
             elif line.op == IROperation.IF:
-                if not isinstance(condition_reg, int):
+                if not isinstance(condition_reg, Register):
                     raise TypeError("Expected condition register to be an int")
                 if not isinstance(line.arg1, int):
                     raise TypeError("Expected arg1 to be of type int")
@@ -1158,7 +1209,7 @@ class CodeGenerator:
                     JneCommand(
                         condition_reg,
                         destination_line,
-                        0,
+                        REG_ZERO,
                         "Jump if conditional",
                         source_line,
                     ),
@@ -1172,7 +1223,7 @@ class CodeGenerator:
                     JeqCommand(
                         condition_reg,
                         destination_line,
-                        0,
+                        REG_ZERO,
                         "Jump if not against conditional",
                         source_line,
                     ),
