@@ -1,6 +1,5 @@
-from dataclasses import dataclass
+from collections import defaultdict
 from math import ceil
-from typing import Literal
 
 from compiler.ast_nodes import (
     AndExpression,
@@ -48,18 +47,13 @@ from compiler.tm import (
 )
 
 REG_ZERO = 0
-REG_RETURN_VALUE = 4
+REG_GPS = [1, 2, 3]
+# REG_RETURN_VALUE = 4
 REG_STATUS = 5
 REG_TOP = 6
 REG_PC = 7
 
 OFFSET_TO_TEMP = 7
-
-
-@dataclass
-class MemoryLocation:
-    location: Literal["register", "dmem"]
-    position: int
 
 
 class CodeGenerator:
@@ -73,17 +67,158 @@ class CodeGenerator:
         self._goto_mapping: dict[str, int] = {}
         # Original IR line, optional conditional register, source position
         self._jumps_to_complete: list[tuple[IR, int | None, int]] = []
-        self._current_params: list[MemoryLocation] = []
+        self._current_params: list[int] = []
 
         self._topoffsets_to_complete: list[tuple[str, int]] = []
         self._topoffsets: dict[str, int] = {}
 
         self._current_fn_context: dict[str, int] = {}
 
-    # Alternating returning reg 1-2 will work good enough for now
-    def _get_register(self) -> int:
-        self._register += 1
-        return (self._register % 2) + 1
+        self._register_map: dict[int, list[int]] = defaultdict(list)
+
+    # TODO: Test this function
+    # Returns: tuple representing register id to use and whether that vlaue is EVER used again
+    def get_furthest_register(self, upcoming_ir: list[IR]) -> tuple[int, bool]:
+        # Determine distance to next use of value in each register
+        distance_to_registers: dict[int, int] = dict[int, int]()
+        for distance, ir in enumerate(upcoming_ir):
+            for reg_id, reg_values in self._register_map.items():
+                if (
+                    isinstance(ir.result, int)
+                    and ir.result in reg_values
+                    and reg_id not in distance_to_registers
+                ):
+                    distance_to_registers[reg_id] = distance
+                if (
+                    isinstance(ir.arg1, int)
+                    and ir.arg1 in reg_values
+                    and reg_id not in distance_to_registers
+                ):
+                    distance_to_registers[reg_id] = distance
+                if (
+                    isinstance(ir.arg2, int)
+                    and ir.arg2 in reg_values
+                    and reg_id not in distance_to_registers
+                ):
+                    distance_to_registers[reg_id] = distance
+            if len(distance_to_registers) == len(REG_GPS):
+                break
+
+        # If any register is NEVER used again, return that reg
+        for reg in REG_GPS:
+            if reg not in distance_to_registers:
+                return (reg, False)
+
+        # Otherwise, return the reg with the longest until used next
+        furthest_distance = max(distance_to_registers.values())
+        for reg_id, distance in distance_to_registers.items():
+            if distance == furthest_distance:
+                return (reg_id, True)
+
+        raise ValueError("Unable to find a furthest register")
+
+    def get_register(
+        self,
+        value: int,
+        upcoming_ir: list[IR],
+    ) -> tuple[int, list[TMLine]]:
+        commands: list[TMLine] = []
+        # If already in a register, return that
+        for reg_id, reg_values in self._register_map.items():
+            if value in reg_values:
+                commands.append(
+                    Comment(f"Found {value} already in a register, using that"),
+                )
+                # It would already be in register map, so no need to add it
+                return (reg_id, commands)
+
+        best_register, commands = self.get_new_register(value, upcoming_ir)
+
+        commands.append(
+            LdCommand(
+                best_register,
+                value + OFFSET_TO_TEMP,
+                REG_STATUS,
+            ),
+        )
+
+        self._register_map[best_register] = [value]
+
+        return (best_register, commands)
+
+    def get_new_register(
+        self,
+        value: int | None,
+        upcoming_ir: list[IR],
+    ) -> tuple[int, list[TMLine]]:
+        commands: list[TMLine] = []
+        commands.append(Comment("Was forced to get a new register..."))
+        # If theres an empty register, return that
+        for reg_id in REG_GPS:
+            reg_values = self._register_map[reg_id]
+            if len(reg_values) == 0:
+                if value is None:
+                    self._register_map[reg_id] = []
+                else:
+                    self._register_map[reg_id] = [value]
+                commands.append(
+                    Comment(
+                        f"Found reg {reg_id} which was already empty! Using that...",
+                    ),
+                )
+                return (
+                    reg_id,
+                    commands,
+                )
+
+        # Value was in nothing AND none were empty, so we need to find the furthest-away register
+        # and use that
+        furthest_away_reg, need_stored = self.get_furthest_register(upcoming_ir)
+        if need_stored:
+            for temp_position in self._register_map[furthest_away_reg]:
+                # We don't store into parms (negative offsets)
+                if temp_position < 0:
+                    continue
+
+                commands.append(
+                    Comment(
+                        f"Using furthest away reg {furthest_away_reg}, which needs saved...",
+                    ),
+                )
+                commands.append(
+                    StCommand(
+                        furthest_away_reg,
+                        temp_position + OFFSET_TO_TEMP,
+                        REG_STATUS,
+                        "Storing the most-unused reg into memory",
+                    ),
+                )
+        else:
+            # for reg_idx, reg_val in self._register_map.items():
+            commands.append(
+                Comment(
+                    f"{furthest_away_reg}: {', '.join(map(str, self._register_map[furthest_away_reg]))}",
+                ),
+            )
+            for line in upcoming_ir:
+                commands.append(
+                    Comment(
+                        f"IR Upcoming: {line}",
+                    ),
+                )
+
+            commands.append(
+                Comment(
+                    f"Using furthest away reg {furthest_away_reg}, which is never touched again!",
+                ),
+            )
+
+        if value is None:
+            self._register_map[furthest_away_reg] = []
+        else:
+            self._register_map[furthest_away_reg] = [value]
+
+        return (furthest_away_reg, commands)
 
     def _get_parameter_count(self, name: str) -> int:
         fn = self._symbol_table.scope_lookup(name)
@@ -96,9 +231,6 @@ class CodeGenerator:
             )
         return len(fn_type.source)
 
-    def _select_tmp(self) -> int:
-        return 2  # Currently constant, but later can be more complicated logic
-
     def _get_label(self) -> str:
         return self._label_maker.get_label()
 
@@ -110,7 +242,7 @@ class CodeGenerator:
             imem_offset_for_params += 2
         if param_count > 1:
             imem_offset_for_params += 4 * ceil((param_count - 2) / 2)
-        main_location_imem = 21 + imem_offset_for_params
+        main_location_imem = 22 + imem_offset_for_params
 
         top_offset_from_top: int = param_count + REG_TOP
         return_addr_offset_from_top: int = 1 + param_count
@@ -121,7 +253,7 @@ class CodeGenerator:
         # Move all arguments down 1 slot in DMEM
         # and reverse the order (so actually move it down via #params - 1)
         if param_count >= 1:
-            selected_reg = self._select_tmp()
+            selected_reg = 1
             code.extend(
                 [
                     LdCommand(
@@ -198,7 +330,12 @@ class CodeGenerator:
         code.extend(
             [
                 LdcCommand(7, main_location_imem, "Jump to main"),
-                OutCommand(REG_RETURN_VALUE, "Printing main return value"),
+                LdCommand(
+                    1,
+                    0,
+                    REG_TOP,
+                ),  # Copy return value into main and then print it
+                OutCommand(1, "Printing main return value"),
                 HaltCommand(),
             ],
         )
@@ -208,7 +345,7 @@ class CodeGenerator:
         self,
         function_name: str,
         destination_addr: int | None,
-        params: list[MemoryLocation],
+        params: list[int],
     ) -> list[TMLine]:
         param_count = self._get_parameter_count(function_name)
         status_offset_from_top = param_count + 5
@@ -233,46 +370,26 @@ class CodeGenerator:
             ],
         )
 
-        has_changed_status = False
         for i, param in enumerate(reversed(params)):
+            # TODO: Technically, I should find a way to get upcoming IR here...
+            reg, commands = self.get_register(param, [])
+            code.append(Comment("Register map for context:"))
+            for reg_idx, reg_val in self._register_map.items():
+                code.append(Comment(f"{reg_idx}: {', '.join(map(str, reg_val))}"))
+            code.append(
+                Comment(f"Planning to copy value:{param} from {reg} into arg slot"),
+            )
+            code.extend(commands)
+
             param_offset_in_dmem = i + 1
-            if param.location == "register":
-                code.append(
-                    StCommand(
-                        param.position,
-                        param_offset_in_dmem,
-                        REG_TOP,
-                        "Load value from register into arg slot",
-                    ),
-                )
-            elif param.location == "dmem":
-                code.append(Comment("Load value from memory into arg slot"))
-                if has_changed_status:
-                    code.append(
-                        LdCommand(
-                            REG_STATUS,
-                            status_offset_from_top,
-                            REG_TOP,
-                            "restoring status since it changed",
-                        ),
-                    )
-                # Use reg status as in between variable, knowing it gets restored if
-                # it has been changed
-                code.append(
-                    LdCommand(
-                        REG_STATUS,
-                        param.position,
-                        REG_STATUS,
-                    ),
-                )
-                code.append(
-                    StCommand(
-                        REG_STATUS,
-                        param_offset_in_dmem,
-                        REG_TOP,
-                    ),
-                )
-                has_changed_status = True
+            code.append(
+                StCommand(
+                    reg,
+                    param_offset_in_dmem,
+                    REG_TOP,
+                    "Load param from register into arg slot",
+                ),
+            )
 
         code.extend(
             [
@@ -342,19 +459,21 @@ class CodeGenerator:
 
     def _store_gp_registers(self) -> list[TMLine]:
         commands: list[TMLine] = []
-        for reg_num in range(1, 4):  # Just save the three "general purpose registers"
+        for reg_num in REG_GPS:  # Just save the three "general purpose registers"
             commands.append(StCommand(reg_num, reg_num, REG_STATUS))  # noqa: PERF401
         return commands
 
     def _restore_gp_registers(self) -> list[TMLine]:
         commands: list[TMLine] = []
-        for reg_num in range(1, 4):  # Just save the three "general purpose registers"
+        for reg_num in REG_GPS:  # Just save the three "general purpose registers"
             commands.append(LdCommand(reg_num, reg_num, REG_STATUS))  # noqa: PERF401
         return commands
 
     def _generate_print_fn(self) -> list[TMLine]:
         param_count = self._get_parameter_count("print")
-        selected_reg = self._select_tmp()
+        # TODO: Make sure clearing register_map at right places
+        # Can hard code since nothing else happens in this function context
+        selected_reg = 1
         self._topoffsets["print"] = 0
         commands: list[TMLine] = [
             Comment(""),
@@ -372,7 +491,7 @@ class CodeGenerator:
         self,
         function_name: str,
         destination_addr: int | None,
-        params: list[MemoryLocation],
+        params: list[int],
     ) -> list[TMLine]:
         return [
             Comment(f"Calling {function_name}"),
@@ -387,7 +506,7 @@ class CodeGenerator:
 
     def _generate_function(self, definition: Definition) -> list[TMLine]:
         main_param_count = self._get_parameter_count("main")
-        print_location_imem = 10 + 2 * main_param_count
+        print_location_imem = 11 + 2 * main_param_count
         code: list[TMLine] = []
         code.append(Comment(""))
         code.append(Comment(f"Function: {definition.name.value}"))
@@ -406,6 +525,7 @@ class CodeGenerator:
         temp_spots_required: int = 0
         for print_expr in body.print_expressions:
             self._reset_temps()
+            self._register_map.clear()
             ir = []
             self._generate_ir(print_expr.argument_list.arguments[0].value, ir)
             argument_code: list[TMLine] = self._parse_ir(ir)
@@ -413,45 +533,47 @@ class CodeGenerator:
 
             code.extend(argument_code)
 
-            code.append(
-                LdCommand(
-                    REG_RETURN_VALUE,
-                    print_expr.argument_list.arguments[0].value.place + OFFSET_TO_TEMP,
-                    REG_STATUS,
-                    "Loading result of body into return addr",
-                ),
-            )
-
             code.extend(
                 self._generate_function_call(
                     "print",
                     print_location_imem,
-                    [MemoryLocation("register", REG_RETURN_VALUE)],
+                    [print_expr.argument_list.arguments[0].value.place],
                 ),
             )
+        # Every time we reset temps, we also should clear the register map
+        # TODO: Technically, here we could find a way to leave references to
+        # negative values in the register map since those correspond to arguments
+        # which span the enitre fn body, and only clear the *entire* map when
+        # leaving a function context...
         self._reset_temps()
+        self._register_map.clear()
         ir = []
         self._generate_ir(body.body, ir)
         code.extend(self._parse_ir(ir))
         temp_spots_required = max(temp_spots_required, self._tmp_count)
         self._topoffsets[definition.name.value] = temp_spots_required + 1
         # +1 is required here because we don't use offset 0
+        chosen_reg, commands = self.get_register(body.body.place, [])
+        code.extend(commands)
         code.append(
-            LdCommand(
-                REG_RETURN_VALUE,
-                body.body.place + OFFSET_TO_TEMP,
-                REG_STATUS,
-                "Loading result of body into return addr",
+            Comment(
+                f"Finished body. Gonna store {body.body.place} place now from {chosen_reg}. Reg Map:",
             ),
         )
+        for reg_idx, reg_val in self._register_map.items():
+            code.append(Comment(f"{reg_idx}: {', '.join(map(str, reg_val))}"))
         code.append(
             StCommand(
-                REG_RETURN_VALUE,
+                chosen_reg,
                 -1 - len(definition.parameters.parameters),
                 REG_STATUS,
+                "Store result into return addr (Check this)",  # FIXME: Verify this
             ),
         )
         code.extend(self._return_sequence_called_fn(param_count))
+        # Clear the register map since we're leaving the context of this method
+        # TODO: I don't think this is needed here since it should mirror temp lifetimes
+        self._register_map.clear()
 
         return code
 
@@ -744,20 +866,24 @@ class CodeGenerator:
     def _parse_ir(self, ir: list[IR]) -> list[TMLine]:  # noqa: C901, PLR0912, PLR0915
         out: list[TMLine] = []
         for line in ir:
+            print(f"* {line}")
+        print()
+        for idx, line in enumerate(ir):
+            out.append(Comment(f"Running {line.op} operation..."))
+            upcoming_ir = ir[idx:]
             if line.op == IROperation.SET_LITERAL:
                 if not isinstance(line.arg1, int):
                     raise CodeGenerationError("Arg1 was None")
                 if not isinstance(line.result, int):
                     raise CodeGenerationError("Result was not an int")
+
+                register, commands = self.get_new_register(line.result, upcoming_ir)
+                out.append(Comment("Register map"))
+                for reg_idx, reg_val in self._register_map.items():
+                    out.append(Comment(f"{reg_idx}: {', '.join(map(str, reg_val))}"))
+                out.extend(commands)
                 out.append(
-                    LdcCommand(REG_RETURN_VALUE, line.arg1, "Loading literal"),
-                )
-                out.append(
-                    StCommand(
-                        REG_RETURN_VALUE,
-                        line.result + OFFSET_TO_TEMP,
-                        REG_STATUS,
-                    ),
+                    LdcCommand(register, line.arg1, "Loading literal"),
                 )
             elif line.op in [
                 IROperation.PLUS,
@@ -769,24 +895,10 @@ class CodeGenerator:
                     raise CodeGenerationError("Arg1 or 2 was not an int")
                 if not isinstance(line.result, int):
                     raise CodeGenerationError("Result was not an int")
-                reg_1 = self._get_register()
-                out.append(
-                    LdCommand(
-                        reg_1,
-                        line.arg1 + OFFSET_TO_TEMP,
-                        REG_STATUS,
-                        "Loading first temp value",
-                    ),
-                )
-                reg_2 = self._get_register()
-                out.append(
-                    LdCommand(
-                        reg_2,
-                        line.arg2 + OFFSET_TO_TEMP,
-                        REG_STATUS,
-                        "Loading second temp value",
-                    ),
-                )
+                reg_1, commands = self.get_register(line.arg1, upcoming_ir)
+                out.extend(commands)
+                reg_2, commands = self.get_register(line.arg2, upcoming_ir)
+                out.extend(commands)
                 command_builder = {
                     IROperation.PLUS: AddCommand,
                     IROperation.MINUS: SubCommand,
@@ -794,21 +906,14 @@ class CodeGenerator:
                     IROperation.DIVIDE: DivCommand,
                 }[line.op]
 
-                out_reg = self._get_register()
+                out_reg, commands = self.get_new_register(line.result, upcoming_ir)
+                out.extend(commands)
                 out.append(
                     command_builder(
                         out_reg,
                         reg_1,
                         reg_2,
                         "Adding the two value and put into return",
-                    ),
-                )
-                out.append(
-                    StCommand(
-                        out_reg,
-                        line.result + OFFSET_TO_TEMP,
-                        REG_STATUS,
-                        "Putting the result into memory",
                     ),
                 )
             elif line.op in [
@@ -821,25 +926,16 @@ class CodeGenerator:
                     )
                 if not isinstance(line.result, int):
                     raise CodeGenerationError("Result was not an int")
-                reg_1 = self._get_register()
-                reg_2 = self._get_register()
-                out_reg = self._get_register()
+                reg_1, commands = self.get_register(line.arg1, upcoming_ir)
+                out.extend(commands)
+                reg_2, commands = self.get_register(line.arg2, upcoming_ir)
+                out.extend(commands)
+                out_reg, commands = self.get_new_register(line.result, upcoming_ir)
+                out.extend(commands)
                 out.extend(
                     [
-                        LdCommand(
-                            reg_1,
-                            line.arg1 + OFFSET_TO_TEMP,
-                            REG_STATUS,
-                            "Loading first temp value",
-                        ),
-                        LdCommand(
-                            reg_2,
-                            line.arg2 + OFFSET_TO_TEMP,
-                            REG_STATUS,
-                            "Loading second temp value",
-                        ),
                         SubCommand(
-                            reg_1,
+                            out_reg,
                             reg_1,
                             reg_2,
                         ),
@@ -849,7 +945,7 @@ class CodeGenerator:
                 if line.op == IROperation.EQUALS:
                     out.append(
                         JeqCommand(
-                            reg_1,
+                            out_reg,
                             2,
                             REG_PC,
                         ),
@@ -857,7 +953,7 @@ class CodeGenerator:
                 elif line.op == IROperation.LESS_THAN:
                     out.append(
                         JltCommand(
-                            reg_1,
+                            out_reg,
                             2,
                             REG_PC,
                         ),
@@ -884,16 +980,6 @@ class CodeGenerator:
                         ),
                     ],
                 )
-
-                out.append(
-                    StCommand(
-                        out_reg,
-                        line.result + OFFSET_TO_TEMP,
-                        REG_STATUS,
-                        "Putting the result into memory",
-                    ),
-                )
-
             elif line.op in [
                 IROperation.NOT,
                 IROperation.UNARY_MINUS,
@@ -904,31 +990,30 @@ class CodeGenerator:
                     )
                 if not isinstance(line.result, int):
                     raise CodeGenerationError("Result was not an int")
-                reg_1 = self._get_register()
-                out.append(
-                    LdCommand(
-                        reg_1,
-                        line.arg1 + OFFSET_TO_TEMP,
-                        REG_STATUS,
-                        "Loading first temp value",
-                    ),
+                reg_1, commands = self.get_register(line.arg1, upcoming_ir)
+                out.extend(commands)
+                out_reg, commands = self.get_new_register(line.result, upcoming_ir)
+                out.extend(commands)
+                utility_reg, commands = self.get_new_register(
+                    None,
+                    upcoming_ir,
                 )
-                out_reg = self._get_register()
+                out.extend(commands)
                 negation_code = [
                     LdcCommand(
-                        3,
+                        utility_reg,
                         2,
                         f"Performing {line.op} operation",
                     ),
                     MulCommand(
-                        3,
+                        utility_reg,
                         reg_1,
-                        3,
+                        utility_reg,
                     ),
                     SubCommand(
                         reg_1,
                         reg_1,
-                        3,
+                        utility_reg,
                     ),
                 ]
                 if line.op == IROperation.NOT:
@@ -936,13 +1021,13 @@ class CodeGenerator:
                         [
                             *negation_code,
                             LdcCommand(
-                                3,
+                                utility_reg,
                                 1,
                             ),
                             AddCommand(
                                 out_reg,
                                 reg_1,
-                                3,
+                                utility_reg,
                                 "Finished NOT operation",
                             ),
                         ],
@@ -976,29 +1061,14 @@ class CodeGenerator:
                     raise CodeGenerationError("Arg1 was None")
                 if not isinstance(line.result, int):
                     raise CodeGenerationError("Result was not an int")
-                reg_1 = self._get_register()
-                out.extend(
-                    [
-                        LdCommand(
-                            reg_1,
-                            line.arg1 + OFFSET_TO_TEMP,
-                            REG_STATUS,
-                            "Copy (part 1)",
-                        ),
-                        StCommand(
-                            reg_1,
-                            line.result + OFFSET_TO_TEMP,
-                            REG_STATUS,
-                            "Copy (part 2)",
-                        ),
-                        AddCommand(
-                            REG_RETURN_VALUE,
-                            0,
-                            reg_1,
-                            "Copying also into return reg",
-                        ),
-                    ],
-                )
+                reg_1, commands = self.get_register(line.arg1, upcoming_ir)
+                out.extend(commands)
+                # FIXME: This code is really bad, and indicates underlying issues!!
+                for reg in self._register_map.values():
+                    if line.result in reg:
+                        reg.remove(line.result)
+                # FIXME: Very unsure abt this code working
+                self._register_map[reg_1].append(line.result)
             elif line.op in [IROperation.LABEL]:
                 if not isinstance(line.result, str):
                     raise TypeError("Expected result to be of type string")
@@ -1006,15 +1076,8 @@ class CodeGenerator:
             elif line.op in [IROperation.IF_NOT, IROperation.IF]:
                 if not isinstance(line.arg1, int):
                     raise TypeError("Expected arg1 to be of type int")
-                reg = self._get_register()
-                out.append(
-                    LdCommand(
-                        reg,
-                        line.arg1 + OFFSET_TO_TEMP,
-                        REG_STATUS,
-                        "Loading condition into memeory",
-                    ),
-                )
+                reg, commands = self.get_register(line.arg1, upcoming_ir)
+                out.extend(commands)
                 self._jumps_to_complete.append(
                     (line, reg, TMCommand.reserve_line_num()),
                 )
@@ -1025,12 +1088,8 @@ class CodeGenerator:
             elif line.op in [IROperation.PARAM]:
                 if not isinstance(line.result, int):
                     raise TypeError("Expected param to be an int")
-                self._current_params.append(
-                    MemoryLocation(
-                        "dmem",
-                        line.result + OFFSET_TO_TEMP,
-                    ),
-                )
+                out.append(Comment(f"Adding {line.result} into params"))
+                self._current_params.append(line.result)
             elif line.op in [IROperation.CALL]:
                 if not isinstance(line.result, int):
                     raise TypeError("Expected call result to be an int")
@@ -1038,6 +1097,10 @@ class CodeGenerator:
                     raise TypeError("Expected call arg to be a function name")
                 if not isinstance(line.arg2, int):
                     raise TypeError("Expected call arg 2 to be number of params")
+
+                out.append(Comment("Early grab register for fn return value"))
+                out_reg, commands = self.get_new_register(line.result, upcoming_ir)
+                out.extend(commands)
 
                 params = self._current_params.copy()
                 self._current_params.clear()
@@ -1049,10 +1112,11 @@ class CodeGenerator:
                     ),
                 )
                 out.append(
-                    StCommand(
-                        REG_RETURN_VALUE,
-                        line.result + OFFSET_TO_TEMP,
-                        REG_STATUS,
+                    LdCommand(
+                        out_reg,
+                        0,
+                        REG_TOP,
+                        "Pulling the return value into the right register",
                     ),
                 )
 

@@ -490,3 +490,67 @@ def test_recursive():
         ["10"],
         ["55"],
     )
+
+
+def test_equality():
+    options = [
+        {
+            "arguments": ["10", "9"],
+            "output": "0",
+        },
+        {
+            "arguments": ["10", "10"],
+            "output": "1",
+        },
+        {
+            "arguments": ["10", "11"],
+            "output": "0",
+        },
+    ]
+    for option in options:
+        create_and_run_program(
+            """
+        function main(a: integer, b: integer): boolean
+            a = b
+        """,
+            option["arguments"],
+            option["output"],
+        )
+
+
+def test_less_than():
+    options = [
+        {
+            "arguments": ["10", "9"],
+            "output": "0",
+        },
+        {
+            "arguments": ["10", "10"],
+            "output": "0",
+        },
+        {
+            "arguments": ["10", "11"],
+            "output": "1",
+        },
+    ]
+    for option in options:
+        create_and_run_program(
+            """
+        function main(a: integer, b: integer): boolean
+            a < b
+        """,
+            option["arguments"],
+            option["output"],
+        )
+
+
+def test_mod():
+    # TODO: Add most test cases here
+    create_and_run_program(
+        """
+    function main( m: integer, n : integer ) : integer
+        m - m/n * n
+    """,
+        ["13", "8"],
+        ["5"],
+    )
