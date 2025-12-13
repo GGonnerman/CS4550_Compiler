@@ -50,7 +50,7 @@ from compiler.tm import (
 
 REG_ZERO = Register(0)
 REG_GPS = [Register(1), Register(2), Register(3)]
-# REG_RETURN_VALUE = 4  # noqa: ERA001
+REG_RETURN_VALUE = 4
 REG_STATUS = Register(5)
 REG_TOP = Register(6)
 REG_PC = Register(7)
@@ -146,9 +146,6 @@ class CodeGenerator:
         # If already in a register, return that
         for reg_id, reg_values in self._register_map.items():
             if value in reg_values:
-                commands.append(
-                    Comment(f"Found {value} already in a register, using that"),
-                )
                 # It would already be in register map, so no need to add it
                 return (reg_id, commands)
 
@@ -180,11 +177,6 @@ class CodeGenerator:
                     self._register_map[reg_id] = []
                 else:
                     self._register_map[reg_id] = [value]
-                commands.append(
-                    Comment(
-                        f"Found reg {reg_id} which was already empty! Using that...",
-                    ),
-                )
                 return (
                     reg_id,
                     commands,
@@ -194,11 +186,6 @@ class CodeGenerator:
         # and use that
         furthest_away_reg, need_stored = self.get_furthest_register(upcoming_ir)
         if need_stored:
-            commands.append(
-                Comment(
-                    f"Using furthest away reg {furthest_away_reg}, which needs saved for {', '.join(map(str, self._register_map[furthest_away_reg]))}",
-                ),
-            )
             for temp_position in self._register_map[furthest_away_reg]:
                 # We don't store into parms (negative offsets)
 
@@ -213,12 +200,6 @@ class CodeGenerator:
                         f"Storing the most-unused reg into memory at {temp_position}",
                     ),
                 )
-        else:
-            commands.append(
-                Comment(
-                    f"Using furthest away reg {furthest_away_reg}, which is never touched again!",
-                ),
-            )
 
         if value is None:
             self._register_map[furthest_away_reg] = []
@@ -380,17 +361,11 @@ class CodeGenerator:
             ],
         )
 
-        for reg_idx, reg_val in self._register_map.items():
-            code.append(Comment(f"{reg_idx}: {', '.join(map(str, reg_val))}"))
-
         rev_params = list(reversed(params))
         param_ir = [IR(param, None, IROperation.PARAM, None) for param in rev_params]
         for i, param in enumerate(rev_params):
             upcoming_with_params = [*param_ir[i:], *upcoming_ir]
             reg, commands = self.get_register(param, upcoming_with_params)
-            code.append(
-                Comment(f"Planning to copy value:{param} from {reg} into arg slot"),
-            )
             code.extend(commands)
 
             param_offset_in_dmem = i + 1
@@ -399,7 +374,7 @@ class CodeGenerator:
                     reg,
                     param_offset_in_dmem,
                     REG_TOP,
-                    "Load param from register into arg slot",
+                    f"Load param {len(rev_params) - i} from register into arg slot",
                 ),
             )
 
@@ -471,13 +446,13 @@ class CodeGenerator:
 
     def _store_gp_registers(self) -> list[TMLine]:
         commands: list[TMLine] = []
-        for reg_num in REG_GPS:  # Just save the three "general purpose registers"
+        for reg_num in REG_GPS:  # Just save the "general purpose registers"
             commands.append(StCommand(reg_num, reg_num, REG_STATUS))  # noqa: PERF401
         return commands
 
     def _restore_gp_registers(self) -> list[TMLine]:
         commands: list[TMLine] = []
-        for reg_num in REG_GPS:  # Just save the three "general purpose registers"
+        for reg_num in REG_GPS:  # Just save the "general purpose registers"
             commands.append(LdCommand(reg_num, reg_num, REG_STATUS))  # noqa: PERF401
         return commands
 
@@ -567,13 +542,6 @@ class CodeGenerator:
         # +1 is required here because we don't use offset 0
         chosen_reg, commands = self.get_register(body.body.place, [])
         code.extend(commands)
-        code.append(
-            Comment(
-                f"Finished body. Gonna store {body.body.place} place now from {chosen_reg}. Reg Map:",
-            ),
-        )
-        for reg_idx, reg_val in self._register_map.items():
-            code.append(Comment(f"{reg_idx}: {', '.join(map(str, reg_val))}"))
         code.append(
             StCommand(
                 chosen_reg,
@@ -878,11 +846,7 @@ class CodeGenerator:
 
     def _parse_ir(self, ir: list[IR]) -> list[TMLine]:
         out: list[TMLine] = []
-        for line in ir:
-            print(f"* {line}")
-        print()
         for idx, line in enumerate(ir):
-            out.append(Comment(f"Running {line.op} operation..."))
             upcoming_ir = ir[idx:]
             if line.op == IROperation.SET_LITERAL:
                 if not isinstance(line.arg1, int):
@@ -891,9 +855,6 @@ class CodeGenerator:
                     raise CodeGenerationError("Result was not an int")
 
                 register, commands = self.get_new_register(line.result, upcoming_ir)
-                out.append(Comment("Register map"))
-                for reg_idx, reg_val in self._register_map.items():
-                    out.append(Comment(f"{reg_idx}: {', '.join(map(str, reg_val))}"))
                 out.extend(commands)
                 out.append(
                     LdcCommand(register, line.arg1, "Loading literal"),
@@ -1131,7 +1092,6 @@ class CodeGenerator:
             elif line.op in [IROperation.PARAM]:
                 if not isinstance(line.result, int):
                     raise TypeError("Expected param to be an int")
-                out.append(Comment(f"Adding {line.result} into params"))
                 self._current_params.append(line.result)
             elif line.op in [IROperation.CALL]:
                 if not isinstance(line.result, int):
