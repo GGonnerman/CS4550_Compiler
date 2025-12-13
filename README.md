@@ -7,7 +7,22 @@ Produced by the **Compile Squad**
 - Will Gasaway
 - Matthew Costello
 
-This project contains the source code for a Klein to TM Compiler. The project is implemented in python. The project is largely split into 4 sections based on the generalized structure of a compiler: scanning, parsing, semantic analysis, optimization and code generation. This document serves as the primary documentation with supplementary material appearing in the doc directory, which is further broken down by section.
+This project contains the source code for a Klein to TM Compiler. The project is implemented in python. The project is largely split into 4 sections based on the generalized structure of a compiler: scanning, parsing, semantic analysis, and optimization/code generation. This document serves as the primary documentation with supplementary material appearing in the doc directory, which is further broken down by section.
+
+## Table of Contents:
+
+- [Quickstart Guide](#quickstart-guide)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+- [Optimizations Implemented](#optimizations-implemented)
+  - [Smart Register Selection](#smart-register-selection)
+  - [Print Inlining](#print-inlining)
+- [Known Bugs](#known-bugs)
+  - [Scanner](#scanner)
+  - [Parser](#parser)
+  - [Code Generator](#code-generator)
+- [More Running Instructions](#more-running-instructions)
+- [Interested in Contributing? More Resources Below](#interested-in-contributing-more-resources-below)
 
 ## Quickstart Guide
 
@@ -81,15 +96,15 @@ This project contains the source code for a Klein to TM Compiler. The project is
 
 ## Known Bugs
 
-### Scanner:
+### Scanner
 
 - If you do an identifier or integer over 1000 characters long it will crash (due to recursion depth)
 
-### Parser:
+### Parser
 
 - Under unknown conditions, the carrot can be off by one when printing the source code of errors
 
-### Code Generator:
+### Code Generator
 
 - When calling kleinc for a path that contains a period and relying on an implicit .kln extension, the outputted file is incorrectly named and placed in the wrong location
 
