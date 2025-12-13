@@ -4,6 +4,11 @@ from typing_extensions import override
 
 from compiler.position import Position
 
+# The file contains:
+# - Token types which represent every construct in klein
+# - Tokens which are a type, value, and position which are used in the scanner
+#   (extensively) and parser briefly
+
 
 class TokenType(StrEnum):
     INTEGER = auto()

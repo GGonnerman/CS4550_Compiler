@@ -3,6 +3,9 @@ from typing_extensions import override
 from compiler.position import Position
 from compiler.util import insert_newlines
 
+# This file contains special classes for handling errors thrown within
+# different sections of the compiler.
+
 
 class KleinError(Exception):
     def format_line_position(self, original_line: str, position: Position) -> str:

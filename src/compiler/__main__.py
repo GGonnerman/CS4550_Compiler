@@ -5,6 +5,9 @@ from compiler.programs.display_symbol_table import display_symbol_table
 from compiler.programs.token_lister import list_tokens
 from compiler.programs.validator import validate_klein_program
 
+# The are "pass through" methods utilized when making functions available
+# to users via the command line.
+
 
 def klein_list_tokens():
     return list_tokens()

@@ -12,6 +12,8 @@ from compiler.parser import Parser
 from compiler.scanner import Scanner
 from compiler.semantic_analyzer import SemanticAnalyzer
 
+# Converts a klein program (stdin) to a tm program (stdout)
+
 
 def compile():  # noqa: A001
     program = sys.argv[1] if len(sys.argv) > 1 else ""
@@ -26,7 +28,7 @@ def compile():  # noqa: A001
         symbol_table = semantic_analyzer.symbol_table
         code_generator = CodeGenerator(ast, symbol_table)
         code_generator.generate()
-        return
+        return  # noqa: TRY300
     except LexicalError as e:
         print(e)
     except ParseError as e:
@@ -39,9 +41,8 @@ def compile():  # noqa: A001
         print(e)
     except KleinError:
         print("Klein Error: unable to continue processing")
-    except Exception as e:
-        # print("Klein Error: unable to continue processing")
-        raise e
+    except Exception:  # noqa: BLE001
+        print("Klein Error: unable to continue processing")
 
     sys.exit(1)
 

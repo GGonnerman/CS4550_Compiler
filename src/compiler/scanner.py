@@ -2,6 +2,12 @@ from compiler.klein_errors import KleinError, LexicalError
 from compiler.position import Position
 from compiler.tokens import Token, TokenType
 
+# This file contians
+# - constants representing components of the klein grammer
+# - A scanner class which given a program can return the next token
+# - A utility method to convert a TokenType into a human readable format (used
+#   for error logging)
+
 ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 NON_ZERO_INTEGERS = "123456789"
 INTEGERS = "0" + NON_ZERO_INTEGERS

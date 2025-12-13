@@ -9,6 +9,12 @@ from typing_extensions import override
 from compiler.ir import IR
 from compiler.tokens import Token, TokenType
 
+# This files contains
+# - All AST Nodes
+# - Helper functions to convert an ASTNode to indented text or dot
+# - The Semantic Stack and Semantic Actions
+# - Annotation Types
+
 T = TypeVar("T")
 
 

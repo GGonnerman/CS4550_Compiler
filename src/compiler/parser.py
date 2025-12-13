@@ -9,6 +9,9 @@ from compiler.parse_table import NonTerminal, generate_parse_table
 from compiler.scanner import Scanner, tokentype_to_str
 from compiler.tokens import Token, TokenType
 
+# This file contains a Parser class which converts a scanner and file name of
+# a parse table csv and converts it into a program
+
 
 class Parser:
     def __init__(self, scanner: Scanner, parse_table_filename: str = "parse_table.csv"):

@@ -5,6 +5,8 @@ from compiler.klein_errors import LexicalError, ParseError
 from compiler.parser import Parser
 from compiler.scanner import Scanner
 
+# Converts a klein program (stdin) to a dot program (stdout)
+
 
 def ast_to_dot():
     program = sys.argv[1] if len(sys.argv) > 1 else ""
@@ -18,7 +20,7 @@ def ast_to_dot():
         print(e)
     except ParseError as e:
         print(e)
-    except Exception:
+    except Exception:  # noqa: BLE001
         print("Klein Error: unable to continue processing")
 
 

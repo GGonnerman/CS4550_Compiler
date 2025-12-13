@@ -43,6 +43,13 @@ from compiler.parser import Parser
 from compiler.scanner import Scanner
 from compiler.symbol_table import Kind, Symbol, SymbolTable
 
+# Thie file contains
+# - Context class to hold the function, parameters, and parameters that are used
+#   - Primarily helpful for warning users abt unused parameters
+# - Utility Issue Type class to indicate severity of semantic issues
+# - Semantic Analyzer which, given an ast, produces a symbol table along with
+#   warning or errors where pertinent
+
 
 class IssueType(Enum):
     ERROR = auto()

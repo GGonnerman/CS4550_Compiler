@@ -3,6 +3,11 @@ from typing import ClassVar
 
 from typing_extensions import override
 
+# This file contains:
+# - A light wrapper around ints for better type hinting
+# - Classes for every tm command with parameter defaults/exclusions where relevant
+#   and nice formatting via the TMLine base class
+
 
 class Register(int):
     pass

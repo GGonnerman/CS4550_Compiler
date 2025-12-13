@@ -4,6 +4,13 @@ from typing_extensions import override
 
 from compiler.ast_nodes import AnnotationType
 
+# This file contains classes related to the symbol table (used in the semantic analyzer)
+# - Kind which represents the scope of symbols
+# - Symbols which contain rich information about name, type, forward/backward references
+#   and parameters received
+# - Symbol table which holds symbols at different levels of scope and helps with
+#   symbol lookup and backward reference generation.
+
 
 class Kind(Enum):
     LOCAL = auto()
@@ -50,7 +57,7 @@ class Symbol:
             out.append(f"\tfunctions it calls = {', '.join(self.forward_references)}")
         if len(self.backward_references) > 0:
             out.append(
-                f"\tfunctions that call it = {', '.join(self.backward_references)}"
+                f"\tfunctions that call it = {', '.join(self.backward_references)}",
             )
         return "\n".join(out)
 

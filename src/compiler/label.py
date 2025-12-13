@@ -1,5 +1,8 @@
 from random import choice
 
+# This file contains a label generator to make examining/differentiating labels
+# within the 3AC easier.
+
 
 class Label:
     # Require set for alphabet to avoid duplicate elements

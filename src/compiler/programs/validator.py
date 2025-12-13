@@ -4,6 +4,8 @@ from compiler.klein_errors import LexicalError, ParseError
 from compiler.parser import Parser
 from compiler.scanner import Scanner
 
+# Converts a klein program (stdin) to either valid program or an error (stdout)
+
 
 def validate_klein_program():
     program = sys.argv[1] if len(sys.argv) > 1 else ""

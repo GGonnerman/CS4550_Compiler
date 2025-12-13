@@ -2,12 +2,16 @@ from typing import SupportsIndex
 
 from typing_extensions import override
 
+# This file contains a utility position class, which is used in the scanner.
+# It allows independlty tracking line number, position in line, and absolute
+# position. as well as operations like addition and equality.
+
 
 class Position(SupportsIndex):
     def __init__(
         self,
-        line_number: int = 1,  # Most people start lines numbers at 1
-        position: int = 1,  # I guess people also thing the first character is position 1
+        line_number: int = 1,  # Line numbers and positions start at 1 to be human readable
+        position: int = 1,
         absolute_position: int = 0,
     ):
         self._line_number: int = line_number

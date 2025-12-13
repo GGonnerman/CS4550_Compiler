@@ -1,4 +1,4 @@
-# Klein to TM Compiler (WIP)
+# Klein to TM Compiler
 
 Produced by the **Compile Squad**
 
@@ -19,10 +19,11 @@ This project contains the source code for a Klein to TM Compiler. The project is
     - If this is not the case, in `Makefile` line 2, python3 can be changed to a different alias (e.g., `python3.11` or `python`)
   - make
   - git (optional)
+  - graphviz (optional)
 
 ### Installation
 
-- (Optional) Clone the [repository](https://github.com/GGonnerman/CS4550_Compiler) and checkout the feature/scanner branch
+- (Optional) Clone the [repository](https://github.com/GGonnerman/CS4550_Compiler)
 - Open a terminal in the root of the project
 - Run `make setup`
   - This will create a virtual environment (assuming one does not already exist) using venv
@@ -49,10 +50,10 @@ This project contains the source code for a Klein to TM Compiler. The project is
 - kleins will print all tokens within a source klein program
 - kleinf will validate a source klein program
 - kleinv will print the symbol table of a source klein program
-- The following instructions are applicable to any of the kleins/kleinf/kleinv programs. For simplicity, I will refer to that as the `kleins` file for this instruction set which can simply be substitued for your chosen bash file.
-- Ensure that the `kleins` file in the project root is executable
-  - If not, running `chmod +x kleins` should make it
-- From the root, you can now run `./kleins path/to/source.kln`
+- The following instructions are applicable to any of the kleins/kleinf/kleinv programs. For simplicity, I will refer to that as the `kleinX` file for this instruction set which can simply be substitued for your chosen bash file
+- Ensure that the `kleinX` file in the project root is executable
+  - If not, running `chmod +x kleinX` should make it
+- From the root, you can now run `./kleinX path/to/source.kln`
 
 #### Running kleinp on a klein source code file to print text or dot of the ast
 
@@ -62,25 +63,21 @@ This project contains the source code for a Klein to TM Compiler. The project is
 - kleinp defaults to printing text, but it can be customized using the `--format` flag
   - Running `./kleinp --format text path/to/source.kln` will print the file as a 2-space indented text tree
   - Running `./kleinp --format dot path/to/source.kln` will print the file as a dot program
-    - So, given proper dot installation, one can for example run `./kleinp --format dot path/to/source.kln | dot -T png -o out.png` and then view open the out.png file in an external program.
+    - So, given proper graphviz/dot installation, one can for example run `./kleinp --format dot path/to/source.kln | dot -T png -o out.png` and then view open the out.png file in an external program.
 
 #### Need more?
 
-- More details about running the code as well as tests can be found in the [more running instructions](#more-running-instruction) section!
+- More details about running the code as well as tests can be found in the [more running instructions](#more-running-instructions) section!
 
-## Optimization
+## Optimizations Implemented
 
 ### Smart Register Selection
 
-- Our compiler implemented a smart register selection which utilizes next use data to determine which register is the best to "replace." This helps to minimize the number of stores and loads that our compiler makes, thus increasing speed of compiled programs.
+- The compiler implements a smart register selection algorithm which utilizes next use data to determine which register is the best to "replace." This helps to minimize the number of stores and loads that our compiler makes, thus increasing speed of compiled programs.
 
 ### Print Inlining
 
-- Our compiler implemented a basic of in-lining that specifically targets print statements. Due to their frequency and the cost of making function calls, this again helps to increase the speed of compiled programs. We _do_ still generate the source code for the print function in case it becomes necessary. However, it is unused at this time.
-
-## Interested in Code Generation, TM, and Memory Management?
-
-- Documentation for these topics can be found [here](./doc/code-generator-memory-explained.md)!
+- The compiler has a basic of inlining that specifically targets print statements. Due to their frequency and the cost of making function calls, this again helps to increase the speed of compiled programs. We _do_ still generate the source code for the print function in case it becomes necessary. However, it is unused at this time.
 
 ## Known Bugs
 
@@ -90,11 +87,11 @@ This project contains the source code for a Klein to TM Compiler. The project is
 
 ### Parser:
 
-- Under unknown conditions, the carrot can be off by one when printing source code of errors
+- Under unknown conditions, the carrot can be off by one when printing the source code of errors
 
 ### Code Generator:
 
-- When calling kleinc for a that contains a period and relying on an implicit .kln extension, the file is sometimes misnamed and placed in the wrong location
+- When calling kleinc for a path that contains a period and relying on an implicit .kln extension, the outputted file is incorrectly named and placed in the wrong location
 
 ## More Running Instructions
 
@@ -173,3 +170,14 @@ Before running tests (specifically for the compiler), ensure that you have a ver
   - This can be done by (from the root) running `source ./.venv/bin/activate`
 - From the root, execute `pytest tests/<chosen test suite>.py`
   - For example, to only run the tests for the scanner you could execute `pytest tests/test_scanner.py`
+
+## Interested in Contributing? More Resources Below
+
+- [Original language specifications](./doc/scanner/klein_specification.txt)
+- [The Scanner's State Machines](./doc/scanner/finite_state_machines/)
+- The [Refactored Grammer](./doc/parser/refactored_grammar.txt)
+- [Chosen AST Nodes](./doc/parser/ast_nodes.txt)
+- [First and Follow Sets](./doc/parser/first_and_follow_sets.md) and the [Parse Table](./doc/parser/parse_table.csv)
+- All possible [semantic errors](./doc/semantic_checker/all_semantic_error_log.txt)
+- Information about [Code Generation, TM, and Memory Management](./doc/code_generator/code_generator_memory_explained.md)
+- A [Legacy/Outdated README](./doc/prerelease_README.md) still contains useful insights

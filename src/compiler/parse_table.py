@@ -7,6 +7,8 @@ from typing_extensions import override
 from compiler.ast_nodes import SemanticAction
 from compiler.tokens import TokenType
 
+# This file contains utilities to convert a csv into a parse table
+
 
 class NonTerminal(StrEnum):
     PROGRAM = auto()
@@ -37,6 +39,7 @@ class NonTerminal(StrEnum):
         return self.name.upper()
 
 
+# Converts an open file into a matrix of strings
 def clean_csv_file(csvfile: TextIOWrapper) -> list[list[str]]:
     table: list[list[str]] = []
     for raw_row in csvfile:
@@ -75,6 +78,7 @@ def parse_cell(cell: str) -> list[NonTerminal | TokenType | SemanticAction]:
     return out
 
 
+# Converts a table of untypes strings into a useful table maping states
 def process_table_into_parsetable(table: list[list[str]]):
     parse_table: dict[
         tuple[NonTerminal, TokenType],

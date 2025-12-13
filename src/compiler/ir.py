@@ -3,6 +3,12 @@ from enum import Enum, StrEnum, auto
 
 from typing_extensions import override
 
+# This files contains
+# - IROperations used by the intermediate representation (3AC)
+# - Loop Status for tracking enter/exiting contexts
+#   - Used for the register allocation algorithm
+# - IR class which represents a line of 3AC
+
 
 class IROperation(Enum):
     TIMES = auto()

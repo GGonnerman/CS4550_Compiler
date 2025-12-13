@@ -48,6 +48,9 @@ from compiler.tm import (
     TMLine,
 )
 
+# This file contains an omnibus CodeGenerator class which given a program and a
+# symbol table (as well as constant register references) generates a tm program.
+
 REG_ZERO = Register(0)
 REG_GPS = [Register(1), Register(2), Register(3)]
 REG_RETURN_VALUE = 4
@@ -97,7 +100,7 @@ class CodeGenerator:
             result[reg] = new
         self._register_map = result
 
-    # Returns: tuple representing register id to use and whether that vlaue is EVER used again
+    # Returns: tuple representing register id to use and whether that value is EVER used again
     def get_furthest_register(self, upcoming_ir: list[IR]) -> tuple[Register, bool]:
         # Determine distance to next use of value in each register
         distance_to_registers: dict[Register, int] = dict[Register, int]()

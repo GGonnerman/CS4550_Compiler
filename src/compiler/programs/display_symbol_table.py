@@ -5,6 +5,8 @@ from compiler.parser import Parser
 from compiler.scanner import Scanner
 from compiler.semantic_analyzer import SemanticAnalyzer
 
+# Converts a klein program (stdin) to a symbol tablE (stdout)
+
 
 def display_symbol_table():
     program = sys.argv[1] if len(sys.argv) > 1 else ""
@@ -19,7 +21,7 @@ def display_symbol_table():
     except ParseError as e:
         print(e)
         return
-    except Exception:
+    except Exception:  # noqa: BLE001
         print("Klein Error: unable to continue processing")
         return
 
@@ -31,7 +33,7 @@ def display_symbol_table():
     except SemanticError as e:
         analyzer.display_issues()
         print(e)
-    except Exception:
+    except Exception:  # noqa: BLE001
         print("Klein Error: unable to continue processing")
 
 
