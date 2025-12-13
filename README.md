@@ -173,7 +173,7 @@ This project contains the source code for a Klein to TM Compiler. The project is
 
 #### Running Tests
 
-Before running tests (specifically for the compiler), ensure that you have a version of tm-cli-go compiled for your machine (ideally with increase imem and dmem). This file should be placed inside of the tests directory and named `tm_cli_go` to ensure test functionality.
+Before running tests (specifically for the compiler), ensure that you have a version of tm-cli-go compiled for your machine (ideally with increased imem and dmem). This file should be placed inside of the tests directory and named `tm_cli_go` to ensure test functionality.
 
 ##### Running All Tests
 
